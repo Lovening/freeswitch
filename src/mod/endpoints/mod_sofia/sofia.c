@@ -39,6 +39,8 @@
  * sofia.c -- SOFIA SIP Endpoint (sofia code)
  *
  */
+
+// SIP协议栈处理逻辑
 #include "mod_sofia.h"
 #include <switch_ssl.h>
 
@@ -1461,7 +1463,7 @@ static void sofia_handle_sip_r_refer(nua_t *nua, sofia_profile_t *profile, nua_h
 
 
 
-//sofia_dispatch_event_t *de
+//sofia_event_callback->our_sofia_event_callback
 static void our_sofia_event_callback(nua_event_t event,
 						  int status,
 						  char const *phrase,
@@ -1794,10 +1796,10 @@ static void our_sofia_event_callback(nua_event_t event,
 	case nua_i_invite:
 		if (session && sofia_private) {
 			if (sofia_private->is_call > 1) {
-				sofia_handle_sip_i_reinvite(session, nua, profile, nh, sofia_private, sip, de, tags);
+				sofia_handle_sip_i_reinvite(session, nua, profile, nh, sofia_private, sip, de, tags);// 重新INVITE
 			} else {
 				sofia_private->is_call++;
-				sofia_handle_sip_i_invite(session, nua, profile, nh, sofia_private, sip, de, tags);
+				sofia_handle_sip_i_invite(session, nua, profile, nh, sofia_private, sip, de, tags); // 初始INVITE
 			}
 		}
 		break;
@@ -2388,7 +2390,7 @@ static void set_call_id(private_object_t *tech_pvt, sip_t const *sip)
 	}
 }
 
-
+// Sofia Event Callback
 void sofia_event_callback(nua_event_t event,
 						  int status,
 						  char const *phrase,

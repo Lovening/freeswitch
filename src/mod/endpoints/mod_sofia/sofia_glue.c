@@ -33,6 +33,10 @@
  * sofia_glue.c -- SOFIA SIP Endpoint (code to tie sofia to freeswitch)
  *
  */
+
+
+
+// 粘合代码，连接Sofia与FreeSWITCH核心
 #include "mod_sofia.h"
 #include <switch_stun.h>
 

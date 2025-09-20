@@ -422,6 +422,90 @@ void switch_core_state_machine_init(switch_memory_pool_t *pool)
 	return;
 }
 
+// *********
+//  * example of how to use the STATE_MACRO
+//  * 
+//  * 
+//  * // 简化版：驱动回调、应用回调、以及一个统一的状态执行宏
+// #include <stdio.h>
+
+// typedef enum { OK = 0, FAIL = 1 } status_t;
+
+// typedef struct {
+//     status_t (*on_init)(void);
+//     status_t (*on_execute)(void);
+//     status_t (*on_hangup)(void);
+// } state_handler_t;
+
+// typedef struct {
+//     status_t (*on_init)(void);
+//     status_t (*on_execute)(void);
+//     status_t (*on_hangup)(void);
+//     int pre_exec; // 1: PRE_EXEC 阶段, 0: 非 PRE_EXEC
+// } app_handler_t;
+
+// static status_t default_on_init(void)    { puts("default: INIT");    return OK; }
+// static status_t default_on_execute(void) { puts("default: EXECUTE"); return OK; }
+// static status_t default_on_hangup(void)  { puts("default: HANGUP");  return OK; }
+
+// // 驱动/端点的回调
+// static status_t drv_on_init(void)    { puts("driver: on_init");    return OK; }
+// static status_t drv_on_execute(void) { puts("driver: on_execute"); return OK; }
+// static status_t drv_on_hangup(void)  { puts("driver: on_hangup");  return OK; }
+
+// // 应用层两个处理器：一个 PRE，一个 POST
+// static status_t appA_on_init(void)    { puts("appA: on_init (PRE)");    return OK; }
+// static status_t appA_on_execute(void) { puts("appA: on_execute (PRE)"); return OK; }
+// static status_t appA_on_hangup(void)  { puts("appA: on_hangup (PRE)");  return OK; }
+
+// static status_t appB_on_init(void)    { puts("appB: on_init (POST)");    return OK; }
+// static status_t appB_on_execute(void) { puts("appB: on_execute (POST)"); return OK; }
+// static status_t appB_on_hangup(void)  { puts("appB: on_hangup (POST)");  return OK; }
+
+// // 统一状态执行宏：按 PRE -> driver -> POST -> default 的顺序执行
+// #define DO_STATE(STATE, STATE_STR) do {                                      \
+//     int proceed = 1;                                                          \
+//     puts("== State " STATE_STR " ==");                                        \
+//     /* PRE handlers */                                                        \
+//     for (int i = 0; i < app_count && proceed; ++i) {                          \
+//         if (!apps[i].pre_exec) continue;                                      \
+//         if (apps[i].on_##STATE && apps[i].on_##STATE() != OK) proceed = 0;    \
+//     }                                                                         \
+//     /* driver */                                                              \
+//     if (proceed && driver.on_##STATE) {                                       \
+//         if (driver.on_##STATE() != OK) proceed = 0;                           \
+//     }                                                                         \
+//     /* POST handlers */                                                       \
+//     for (int i = 0; i < app_count && proceed; ++i) {                          \
+//         if (apps[i].pre_exec) continue;                                       \
+//         if (apps[i].on_##STATE && apps[i].on_##STATE() != OK) proceed = 0;    \
+//     }                                                                         \
+//     /* default */                                                             \
+//     if (proceed) {                                                            \
+//         if (default_on_##STATE) default_on_##STATE();                         \
+//     }                                                                         \
+//     puts("-- " STATE_STR " done --");                                         \
+// } while (0)
+
+// int main(void) {
+//     state_handler_t driver = { drv_on_init, drv_on_execute, drv_on_hangup };
+
+//     app_handler_t apps[] = {
+//         { appA_on_init, appA_on_execute, appA_on_hangup, 1 }, // PRE
+//         { appB_on_init, appB_on_execute, appB_on_hangup, 0 }  // POST
+//     };
+//     int app_count = (int)(sizeof(apps)/sizeof(apps[0]));
+
+//     // 宏里需要可见到 driver / apps / app_count / default_on_*
+//     // 这里通过同名变量放在同一作用域
+//     (void)driver; (void)apps; (void)app_count;
+
+//     DO_STATE(init,    "INIT");
+//     DO_STATE(execute, "EXECUTE");
+//     DO_STATE(hangup,  "HANGUP");
+//     return 0;
+// }
+
 #define STATE_MACRO(__STATE, __STATE_STR)						do {	\
 		midstate = state;												\
 		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_DEBUG, "(%s) State %s\n", switch_channel_get_name(session->channel), __STATE_STR); \

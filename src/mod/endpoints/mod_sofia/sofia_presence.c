@@ -35,6 +35,8 @@
  * sofia_presence.c -- SOFIA SIP Endpoint (presence code)
  *
  */
+
+//状态管理
 #include "mod_sofia.h"
 #include "switch_stun.h"
 

@@ -1,0 +1,12 @@
+{
+    "cmake.sourceDirectory": "/home/ning/workSpace/freeswitch/src",
+    "files.associations": {
+        "atomic": "cpp",
+        "switch_hashtable.h": "c"
+    },
+
+    "C_Cpp.intelliSenseEngine": "Default",
+    "C_Cpp.intelliSenseEngineFallback": "Enabled",
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/compile_commands.json",
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc"
+}

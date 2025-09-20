@@ -37,6 +37,8 @@
  * sofia_reg.c -- SOFIA SIP Endpoint (registration code)
  *
  */
+
+// 注册管理
 #include "mod_sofia.h"
 #include "sofia-sip/hostdomain.h"
 #include "sip-dig.h"

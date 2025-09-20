@@ -1198,7 +1198,7 @@ SWITCH_DECLARE(void) switch_core_runtime_loop(int bg)
 		}
 #else
 		while (runtime.running) {
-			switch_yield(1000000);
+			switch_yield(1000000); //封装的sleep 函数
 		}
 #endif
 	} else {
@@ -1794,6 +1794,7 @@ SWITCH_DECLARE(int) switch_core_test_flag(int flag)
 }
 
 
+//
 SWITCH_DECLARE(switch_status_t) switch_core_init(switch_core_flag_t flags, switch_bool_t console, const char **err)
 {
 	switch_uuid_t uuid;
@@ -1897,7 +1898,9 @@ SWITCH_DECLARE(switch_status_t) switch_core_init(switch_core_flag_t flags, switc
 	switch_thread_rwlock_create(&runtime.global_var_rwlock, runtime.memory_pool);
 	switch_core_set_globals();
 	switch_core_session_init(runtime.memory_pool);
+
 	switch_event_create_plain(&runtime.global_vars, SWITCH_EVENT_CHANNEL_DATA);
+
 	switch_core_hash_init_case(&runtime.mime_types, SWITCH_FALSE);
 	switch_core_hash_init_case(&runtime.mime_type_exts, SWITCH_FALSE);
 	switch_core_hash_init_case(&runtime.ptimes, SWITCH_FALSE);
@@ -2442,6 +2445,7 @@ switch_status_t switch_core_sqldb_init(const char **err)
 	return SWITCH_STATUS_SUCCESS;
 }
 
+// 加载模块并初始化核心
 SWITCH_DECLARE(switch_status_t) switch_core_init_and_modload(switch_core_flag_t flags, switch_bool_t console, const char **err)
 {
 	switch_event_t *event;
@@ -2450,7 +2454,7 @@ SWITCH_DECLARE(switch_status_t) switch_core_init_and_modload(switch_core_flag_t 
 	const char *use = NULL;
 #include "cc.h"
 
-
+	// flags 传入的标志位  console 是否在控制台输出  err 错误信息
 	if (switch_core_init(flags, console, err) != SWITCH_STATUS_SUCCESS) {
 		return SWITCH_STATUS_GENERR;
 	}
@@ -2468,6 +2472,8 @@ SWITCH_DECLARE(switch_status_t) switch_core_init_and_modload(switch_core_flag_t 
 
 	switch_msrp_init();
 
+
+	// 开始加载模块
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "Bringing up environment.\n");
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "Loading Modules.\n");
 	if (switch_loadable_module_init(SWITCH_TRUE) != SWITCH_STATUS_SUCCESS) {

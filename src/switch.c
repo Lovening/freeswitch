@@ -1197,7 +1197,7 @@ int main(int argc, char *argv[])
 	}
 
 	switch_file_write(fd, pid_buffer, &pid_len);
-
+	// 加载所有核心模块并初始化
 	if (switch_core_init_and_modload(flags, nc ? SWITCH_FALSE : SWITCH_TRUE, &err) != SWITCH_STATUS_SUCCESS) {
 		fprintf(stderr, "Cannot Initialize [%s]\n", err);
 		return 255;
