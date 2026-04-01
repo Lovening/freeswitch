@@ -1,0 +1,4 @@
+[submodule "src/mod/applications/mod_rtpforward/libwebsockets"]
+	path = src/mod/applications/mod_rtpforward/libwebsockets
+	url = https://github.com/warmcat/libwebsockets.git
+	branch = v4.3-stable
