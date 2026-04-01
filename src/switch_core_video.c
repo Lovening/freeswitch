@@ -54,6 +54,15 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../libs/stb/stb_image_write.h"
 
+/* Define MIN macro if not already defined */
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+
 #ifdef SWITCH_HAVE_YUV
 static inline void switch_img_get_yuv_pixel(switch_image_t *img, switch_yuv_color_t *yuv, int x, int y);
 #endif
@@ -103,6 +112,10 @@ static inline int switch_color_distance_multi(switch_rgb_color_t *c1, switch_rgb
 * \param[in]    color     RGB color
 */
 static inline void switch_img_draw_pixel(switch_image_t *img, int x, int y, switch_rgb_color_t *color);
+
+
+
+
 
 
 struct pos_el {
@@ -189,11 +202,7 @@ SWITCH_DECLARE(switch_bool_t) switch_core_has_video(void)
 #endif
 }
 
-SWITCH_DECLARE(switch_image_t *)switch_img_alloc(switch_image_t  *img,
-						 switch_img_fmt_t fmt,
-						 unsigned int d_w,
-						 unsigned int d_h,
-						 unsigned int align)
+SWITCH_DECLARE(switch_image_t *)switch_img_alloc(switch_image_t  *img,switch_img_fmt_t fmt,unsigned int d_w,unsigned int d_h,unsigned int align)
 {
 #ifdef SWITCH_HAVE_VPX
 	switch_image_t *r = NULL;
@@ -3896,7 +3905,7 @@ SWITCH_DECLARE(void) switch_core_video_parse_filter_string(switch_core_video_fil
 	if (switch_stristr("fg-8bit", filter_str)) {
 		*filters |= SCV_FILTER_8BIT_FG;
 	}
-} 
+}
 
 
 

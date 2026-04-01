@@ -1,0 +1,69 @@
+---
+# 启用检查项
+# 1. readability-identifier-naming: 核心功能，用于检查你的命名规范
+# 2. google-explicit-constructor: 对应你文档中"构造函数单参数需 explicit"的要求
+# 3. readability-function-size: 辅助检查，防止函数过大（可选）
+Checks: >
+  -*,
+  readability-identifier-naming,
+  google-explicit-constructor
+
+# 警告视为错误（可选，建议初期留空，以免报错太多无法编译）
+WarningsAsErrors: ''
+
+CheckOptions:
+  # --- 类型命名 (Type Naming) ---
+  # 对应文档：类型名称每个单词首字母均大写 (PascalCase)
+  # 涵盖：类(Class), 结构体(Struct), 类型定义(Typedef), 枚举(Enum)
+  - key:             readability-identifier-naming.ClassCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.StructCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.TypedefCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.EnumCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.UnionCase
+    value:           CamelCase
+
+  # --- 变量命名 (Variable Naming) ---
+  # 对应文档：变量名称一律小写，单词之间用下划线连接 (snake_case)
+  - key:             readability-identifier-naming.VariableCase
+    value:           lower_case
+
+  # --- 成员变量命名 (Member Variable Naming) ---
+  # 对应文档：成员变量用下划线结尾
+  # 这里主要针对私有(private)和保护(protected)成员，保持封装性
+  - key:             readability-identifier-naming.PrivateMemberCase
+    value:           lower_case
+  - key:             readability-identifier-naming.PrivateMemberSuffix
+    value:           _
+  - key:             readability-identifier-naming.ProtectedMemberCase
+    value:           lower_case
+  - key:             readability-identifier-naming.ProtectedMemberSuffix
+    value:           _
+
+  # --- 函数命名 (Function Naming) ---
+  # 对应文档：常规函数名每个单词首字母大写 (PascalCase)
+  - key:             readability-identifier-naming.FunctionCase
+    value:           CamelCase
+
+  # --- 函数参数 (Function Parameters) ---
+  # 文档未显式指定参数命名风格，但根据"变量名称一律小写"推断，参数也应为 snake_case
+  - key:             readability-identifier-naming.ParameterCase
+    value:           lower_case
+
+  # --- 命名空间 (Namespace) ---
+  # 对应文档：名字命名空间要用小写字母命名
+  - key:             readability-identifier-naming.NamespaceCase
+    value:           lower_case
+
+  # --- 其他常见 C++ 元素补充 ---
+  # 确保宏定义是大写加下划线（虽然文档没提，但这是通用标准）
+  - key:             readability-identifier-naming.MacroDefinitionCase
+    value:           UPPER_CASE
+  # 模板参数通常用大写驼峰 (例如 template <typename T> 或 <typename MyType>)
+  - key:             readability-identifier-naming.TemplateParameterCase
+    value:           CamelCase
+
+...

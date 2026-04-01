@@ -62,7 +62,7 @@ typedef int  (*imem_get_t)(void *data, const char *cookie,
 typedef void (*imem_release_t)(void *data, const char *cookie, size_t, void *);
 
 /* Change value to -vvv for vlc related debug. Be careful since vlc is at least as verbose as FS about logging */
-const char *vlc_args[] = {"-vvv"};
+const char *vlc_args[] = {"-vvv", "--no-xlib"};
 //const char *vlc_args[] = {"--network-caching=0"};
 //--sout-mux-caching
 
@@ -1500,7 +1500,8 @@ SWITCH_STANDARD_APP(play_video_function)
 		context->m = libvlc_media_new_path(vlc_handle, path);
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "VLC Path is mms %s\n", path);
 	} else if (! strncmp(path, "rtsp", 3)){
-		context->m = libvlc_media_new_path(vlc_handle, path);
+		// context->m = libvlc_media_new_path(vlc_handle, path);
+		context->m = libvlc_media_new_location(vlc_handle, path);
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "VLC Path is rtsp %s\n", path);
 	} else if (! strncmp(path, "/", 1)){
 		context->m = libvlc_media_new_path(vlc_handle, path);
@@ -1788,7 +1789,7 @@ static switch_status_t video_read_callback(switch_core_session_t *session, switc
 
 	return SWITCH_STATUS_SUCCESS;
 }
-
+// switch_standard
 SWITCH_STANDARD_APP(capture_video_function)
 {
 	switch_channel_t *channel = switch_core_session_get_channel(session);
@@ -2189,13 +2190,15 @@ static switch_status_t setup_tech_pvt(switch_core_session_t *osession, switch_co
 		context->m = libvlc_media_new_location(context->vlc_handle, path);
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "VLC Path is http %s\n", path);
 	} else if (! strncmp(path, "rtp", 3)){
-		context->m = libvlc_media_new_path(context->vlc_handle, path);
+		// context->m = libvlc_media_new_path(context->vlc_handle, path);
+		context->m = libvlc_media_new_location(context->vlc_handle, path);
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "VLC Path is rtp %s\n", path);
 	} else if (! strncmp(path, "mms", 3)){
 		context->m = libvlc_media_new_path(context->vlc_handle, path);
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "VLC Path is mms %s\n", path);
-	} else if (! strncmp(path, "rtsp", 3)){
-		context->m = libvlc_media_new_path(context->vlc_handle, path);
+	} else if (! strncmp(path, "rtsp", 4)){
+		// context->m = libvlc_media_new_path(context->vlc_handle, path);
+		context->m = libvlc_media_new_location(context->vlc_handle, path);
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "VLC Path is rtsp %s\n", path);
 	} else if (! strncmp(path, "/", 1)){
 		context->m = libvlc_media_new_path(context->vlc_handle, path);

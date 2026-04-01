@@ -1754,9 +1754,9 @@ SWITCH_DECLARE(switch_xml_t) switch_xml_parse_file(const char *file)
 	return xml;
 }
 
-SWITCH_DECLARE(switch_status_t) switch_xml_locate(const char *section,
-												  const char *tag_name,
-												  const char *key_name,
+SWITCH_DECLARE(switch_status_t) switch_xml_locate(const char *section, // "directory"
+												  const char *tag_name, // "domain"
+												  const char *key_name, // "name"
 												  const char *key_value,
 												  switch_xml_t *root, switch_xml_t *node, switch_event_t *params, switch_bool_t clone)
 {

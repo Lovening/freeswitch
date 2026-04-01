@@ -1650,7 +1650,7 @@ static void base_set (switch_core_session_t *session, const char *data, switch_s
 	} else {
 		switch_channel_t *channel = switch_core_session_get_channel(session);
 		char *expanded = NULL;
-
+		// 对字符串进行复制
 		var = switch_core_session_strdup(session, data);
 
 		if (!(val = strchr(var, '='))) {

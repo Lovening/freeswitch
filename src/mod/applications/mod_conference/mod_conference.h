@@ -45,6 +45,16 @@
 
 #include <switch.h>
 
+/* FFmpeg filter support for video overlay */
+#ifdef HAVE_LIBAVFILTER
+#include <libavfilter/avfilter.h>
+#include <libavfilter/buffersrc.h>
+#include <libavfilter/buffersink.h>
+#include <libavutil/opt.h>
+#include <libavutil/frame.h>
+#include <libavutil/imgutils.h>
+#endif
+
 /* DEFINES */
 
 #ifdef OPENAL_POSITIONING
@@ -221,15 +231,15 @@ typedef enum {
 } member_flag_t;
 
 typedef enum {
-	CFLAG_RUNNING,
-	CFLAG_DYNAMIC,
+	CFLAG_RUNNING, //运行中 会议正在运行的核心标志
+	CFLAG_DYNAMIC, //动态会议 临时创建的会议（非配置文件预定义）
 	CFLAG_ENFORCE_MIN,
-	CFLAG_DESTRUCT,
-	CFLAG_LOCKED,
+	CFLAG_DESTRUCT, // 销毁标志
+	CFLAG_LOCKED, //锁定状态
 	CFLAG_ANSWERED,
 	CFLAG_BRIDGE_TO,
 	CFLAG_WAIT_MOD,
-	CFLAG_VID_FLOOR,
+	CFLAG_VID_FLOOR, //视频发言权
 	CFLAG_WASTE_FLAG,
 	CFLAG_OUTCALL,
 	CFLAG_INHASH,
@@ -459,51 +469,95 @@ typedef struct mcu_layer_cam_opts_s {
 struct mcu_canvas_s;
 
 typedef struct mcu_layer_s {
-	mcu_layer_geometry_t geometry;
-	int member_id;
-	int idx;
-	int tagged;
-	int bugged;
-	uint32_t screen_w;
-	uint32_t screen_h;
-	int x_pos;
-	int y_pos;
-	int banner_patched;
-	int mute_patched;
-	int avatar_patched;
-	int refresh;
-	int clear;
-	int is_avatar;
-	int crop_x;
-	int crop_y;
-	int crop_w;
-	int crop_h;
-	int last_w;
-	int last_h;
-	uint32_t img_count;
-	switch_image_t *img;
-	switch_image_t *cur_img;
-	switch_image_t *overlay_img;
-	switch_image_t *banner_img;
-	switch_image_t *logo_img;
-	switch_image_t *mute_img;
-	switch_img_txt_handle_t *txthandle;
-	conference_file_node_t *fnode;
-	switch_img_position_t logo_pos;
-	switch_img_fit_t logo_fit;
-	struct mcu_canvas_s *canvas;
-	int need_patch;
-	conference_member_t *member;
-	switch_frame_t bug_frame;
-	switch_frame_geometry_t last_geometry;
-	switch_frame_geometry_t auto_geometry;
-	switch_frame_geometry_t zoom_geometry;
-	switch_frame_geometry_t pan_geometry;
-	switch_frame_geometry_t manual_geometry;
-	mcu_layer_cam_opts_t cam_opts;
-	switch_mutex_t *overlay_mutex;
-	switch_core_video_filter_t overlay_filters;
-	int manual_border;
+	/* ==================== 几何与成员信息 ==================== */
+	mcu_layer_geometry_t geometry;     /* 层的几何配置（位置、尺寸等布局参数） */
+	int member_id;                     /* 关联的会议成员ID（0表示未使用） */
+	int idx;                           /* 层在画布中的索引位置 */
+	int tagged;                        /* 标志：层是否被标记（用于布局管理） */
+	int bugged;                        /* 标志：是否启用水印叠加 */
+
+	/* ==================== 屏幕与位置参数 ==================== */
+	uint32_t screen_w;                /* 屏幕宽度（像素）- 分配给此层的显示区域宽度 */
+	uint32_t screen_h;                /* 屏幕高度（像素）- 分配给此层的显示区域高度 */
+	int x_pos;                        /* 层在画布上的X坐标（相对于画布原点） */
+	int y_pos;                        /* 层在画布上的Y坐标（相对于画布原点） */
+
+	/* ==================== 叠加状态标志（防止重复叠加） ==================== */
+	int banner_patched;               /* 标志：横幅文字是否已叠加（避免每帧重复渲染） */
+	int mute_patched;                 /* 标志：静音图标是否已叠加 */
+	int avatar_patched;               /* 标志：头像图片是否已叠加 */
+
+	/* ==================== 刷新与状态标志 ==================== */
+	int refresh;                      /* 标志：层是否需要刷新（重绘） */
+	int clear;                        /* 标志：层是否需要清除 */
+	int is_avatar;                    /* 标志：当前是否显示为头像模式（无视频时） */
+
+	/* ==================== 视频裁剪参数 ==================== */
+	int crop_x;                       /* 裁剪区域的X起始坐标 */
+	int crop_y;                       /* 裁剪区域的Y起始坐标 */
+	int crop_w;                       /* 裁剪区域的宽度 */
+	int crop_h;                       /* 裁剪区域的高度 */
+
+	/* ==================== 缓存与计数 ==================== */
+	int last_w;                       /* 上一次渲染的宽度（用于检测尺寸变化） */
+	int last_h;                       /* 上一次渲染的高度（用于检测尺寸变化） */
+	uint32_t img_count;               /* 接收到的图像帧计数器 */
+
+	/* ==================== 图像资源指针 ==================== */
+	switch_image_t *img;              /* 主要图像指针（缩放后的视频帧） */
+	switch_image_t *cur_img;          /* 当前原始图像指针（未缩放的输入帧） */
+	switch_image_t *overlay_img;      /* 叠加层图像（如半透明遮罩、边框等） */
+	switch_image_t *banner_img;       /* 横幅文字图像（包含文字的透明PNG） */
+	switch_image_t *logo_img;         /* Logo图标图像（会议成员头像/图标） */
+	switch_image_t *mute_img;         /* 静音图标图像（显示静音状态） */
+
+	/* ==================== 文字与文件处理 ==================== */
+	switch_img_txt_handle_t *txthandle; /* 文字渲染句柄（用于绘制横幅文字） */
+	conference_file_node_t *fnode;      /* 正在播放的文件节点（如等待音乐） */
+
+	/* ==================== Logo配置 ==================== */
+	switch_img_position_t logo_pos;    /* Logo位置配置（如左上角、右下角等） */
+	switch_img_fit_t logo_fit;         /* Logo缩放适配模式（FIT_SIZE/FIT_SCALE等） */
+
+	/* ==================== 画布与成员关联 ==================== */
+	struct mcu_canvas_s *canvas;       /* 所属的画布对象指针（父容器） */
+	int need_patch;                   /* 标志：层是否需要补丁/修补到画布 */
+	conference_member_t *member;      /* 关联的会议成员对象指针 */
+
+	/* ==================== 水印相关 ==================== */
+	switch_frame_t bug_frame;          /* 水印帧数据（如电视台Logo、公司标识） */
+
+	/* ==================== 几何变换配置 ==================== */
+	switch_frame_geometry_t last_geometry;      /* 上一次的几何参数（用于检测变化） */
+	switch_frame_geometry_t auto_geometry;      /* 自动调整的几何参数（AI取景等） */
+	switch_frame_geometry_t zoom_geometry;      /* 缩放几何参数（数字放大） */
+	switch_frame_geometry_t pan_geometry;       /* 平移几何参数（数字平移） */
+	switch_frame_geometry_t manual_geometry;    /* 手动设置的几何参数（覆盖自动） */
+
+	/* ==================== 摄像头选项 ==================== */
+	mcu_layer_cam_opts_t cam_opts;    /* 摄像头控制选项（自动缩放、自动平移等参数） */
+
+	/* ==================== 叠加层同步与滤镜 ==================== */
+	switch_mutex_t *overlay_mutex;    /* 叠加层操作互斥锁（保护overlay_img的并发访问） */
+	switch_core_video_filter_t overlay_filters; /* 叠加层滤镜效果（灰度、棕褐色等） */
+
+	/* ==================== 边框 ==================== */
+	int manual_border;                /* 手动设置的边框宽度（像素） */
+
+	/* ==================== FFmpeg Filter 支持（用户ID/名称叠加） ==================== */
+#ifdef HAVE_LIBAVFILTER
+	AVFilterGraph *filter_graph;      /* FFmpeg filter graph（滤镜处理图） */
+	AVFilterContext *buffersrc_ctx;   /* 输入源上下文（接收原始视频帧） */
+	AVFilterContext *buffersink_ctx;  /* 输出源上下文（获取处理后的帧） */
+	AVFrame *filter_frame_in;         /* 输入 AVFrame */
+	AVFrame *filter_frame_out;        /* 输出 AVFrame */
+	int filter_w;                     /* Filter graph input width */
+	int filter_h;                     /* Filter graph input height */
+	switch_bool_t filter_enabled;     /* 标志：filter是否启用 */
+	switch_bool_t filter_last_can_speak; /* 上一帧的静音状态，用于检测变化 */
+	int64_t filter_pts;               /* 当前送入 filter 的 pts */
+	int64_t filter_pts_step;          /* 每帧 pts 增量，单位是 1/90000 */
+#endif
 } mcu_layer_t;
 
 typedef struct video_layout_s {
@@ -801,6 +855,10 @@ struct conference_member {
 	char *rec_path;
 	switch_time_t rec_time;
 	conference_record_t *rec;
+	/**add new member record */
+	char * member_record_path; //成员单独录像路径
+	switch_bool_t member_record; // 成员单独录像开关
+	/**-------- */
 	uint8_t *frame;
 	uint8_t *last_frame;
 	uint32_t frame_size;
@@ -908,12 +966,13 @@ struct conference_member {
 	mcu_layer_cam_opts_t cam_opts;
 	switch_core_video_filter_t video_filters;
 	int video_manual_border;
+
 };
 
 typedef enum {
-	CONF_API_SUB_ARGS_SPLIT,
-	CONF_API_SUB_MEMBER_TARGET,
-	CONF_API_SUB_ARGS_AS_ONE
+	CONF_API_SUB_ARGS_SPLIT, //把命令参数按空格拆成 argc / argv，再交给处理函数 参数是多个独立字段的命令，比如 list、play、record、setvar
+	CONF_API_SUB_MEMBER_TARGET, //第一个参数先被当成“成员选择器”，再把命令作用到一个或多个成员上   先选成员，再执行命令
+	CONF_API_SUB_ARGS_AS_ONE  //  后面的整段文本保持原样
 } conference_fntype_t;
 
 typedef void (*void_fn_t) (void);
@@ -1090,6 +1149,13 @@ void *SWITCH_THREAD_FUNC conference_video_muxing_write_thread_run(switch_thread_
 void conference_video_launch_layer_thread(conference_member_t *member);
 void conference_video_wake_layer_thread(conference_member_t *member);
 
+/* FFmpeg filter functions for user ID/name overlay */
+#ifdef HAVE_LIBAVFILTER
+switch_status_t conference_video_init_layer_filter(mcu_layer_t *layer, conference_member_t *member, int width, int height);
+void conference_video_destroy_layer_filter(mcu_layer_t *layer);
+switch_status_t conference_video_apply_layer_filter(mcu_layer_t *layer, switch_image_t **img);
+#endif
+
 int conference_member_noise_gate_check(conference_member_t *member);
 void conference_member_check_channels(switch_frame_t *frame, conference_member_t *member, switch_bool_t in);
 
@@ -1177,6 +1243,8 @@ void conference_event_channel_handler(const char *event_channel, cJSON *json, co
 void conference_event_la_channel_handler(const char *event_channel, cJSON *json, const char *key, switch_event_channel_id_t id, void *user_data);
 void conference_event_mod_channel_handler(const char *event_channel, cJSON *json, const char *key, switch_event_channel_id_t id, void *user_data);
 void conference_event_chat_channel_handler(const char *event_channel, cJSON *json, const char *key, switch_event_channel_id_t id, void *user_data);
+
+
 
 void conference_member_itterator(conference_obj_t *conference, switch_stream_handle_t *stream, uint8_t non_mod, conference_api_member_cmd_t pfncallback, void *data);
 int conference_video_flush_queue(switch_queue_t *q, int min);
@@ -1269,6 +1337,11 @@ switch_status_t conference_api_dispatch(conference_obj_t *conference, switch_str
 switch_status_t conference_api_sub_syntax(char **syntax);
 switch_status_t conference_api_main_real(const char *cmd, switch_core_session_t *session, switch_stream_handle_t *stream);
 switch_status_t conference_api_set_moh(conference_obj_t *conference, const char *what);
+
+/***add conference member record ***/
+switch_status_t conference_api_sub_record_member(conference_member_t *member, switch_stream_handle_t *stream, void *data);
+switch_status_t conference_api_sub_stop_record_member(conference_member_t *member, switch_stream_handle_t *stream, void *data);
+
 
 void conference_loop_mute_on(conference_member_t *member, caller_control_action_t *action);
 void conference_loop_mute_toggle(conference_member_t *member, caller_control_action_t *action);

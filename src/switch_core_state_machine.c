@@ -463,29 +463,30 @@ void switch_core_state_machine_init(switch_memory_pool_t *pool)
 // static status_t appB_on_hangup(void)  { puts("appB: on_hangup (POST)");  return OK; }
 
 // // 统一状态执行宏：按 PRE -> driver -> POST -> default 的顺序执行
-// #define DO_STATE(STATE, STATE_STR) do {                                      \
-//     int proceed = 1;                                                          \
-//     puts("== State " STATE_STR " ==");                                        \
-//     /* PRE handlers */                                                        \
-//     for (int i = 0; i < app_count && proceed; ++i) {                          \
-//         if (!apps[i].pre_exec) continue;                                      \
-//         if (apps[i].on_##STATE && apps[i].on_##STATE() != OK) proceed = 0;    \
-//     }                                                                         \
-//     /* driver */                                                              \
-//     if (proceed && driver.on_##STATE) {                                       \
-//         if (driver.on_##STATE() != OK) proceed = 0;                           \
-//     }                                                                         \
-//     /* POST handlers */                                                       \
-//     for (int i = 0; i < app_count && proceed; ++i) {                          \
-//         if (apps[i].pre_exec) continue;                                       \
-//         if (apps[i].on_##STATE && apps[i].on_##STATE() != OK) proceed = 0;    \
-//     }                                                                         \
-//     /* default */                                                             \
-//     if (proceed) {                                                            \
-//         if (default_on_##STATE) default_on_##STATE();                         \
-//     }                                                                         \
-//     puts("-- " STATE_STR " done --");                                         \
-// } while (0)
+
+#define DO_STATE1(STATE, STATE_STR) do {                                      \
+     int proceed = 1;                                                          \
+     puts("== State " STATE_STR " ==");                                        \
+     /* PRE handlers */                                                        \
+     for (int i = 0; i < app_count && proceed; ++i) {                          \
+         if (!apps[i].pre_exec) continue;                                      \
+         if (apps[i].on_##STATE && apps[i].on_##STATE() != OK) proceed = 0;    \
+     }                                                                         \
+     /* driver */                                                              \
+     if (proceed && driver.on_##STATE) {                                       \
+         if (driver.on_##STATE() != OK) proceed = 0;                           \
+     }                                                                         \
+     /* POST handlers */                                                       \
+     for (int i = 0; i < app_count && proceed; ++i) {                          \
+         if (apps[i].pre_exec) continue;                                       \
+         if (apps[i].on_##STATE && apps[i].on_##STATE() != OK) proceed = 0;    \
+     }                                                                         \
+     /* default */                                                             \
+     if (proceed) {                                                            \
+         if (default_on_##STATE) default_on_##STATE();                         \
+     }                                                                         \
+     puts("-- " STATE_STR " done --");                                         \
+ } while (0)
 
 // int main(void) {
 //     state_handler_t driver = { drv_on_init, drv_on_execute, drv_on_hangup };

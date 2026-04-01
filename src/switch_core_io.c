@@ -96,14 +96,14 @@ SWITCH_DECLARE(switch_status_t) switch_core_session_read_frame(switch_core_sessi
 			*frame = &runtime.dummy_cng_frame;
 			return SWITCH_STATUS_SUCCESS;
 		}
-
+		//音频暂停处理 
 		if (switch_channel_test_flag(session->channel, CF_AUDIO_PAUSE_READ)) {
 			switch_yield(20000);
 			*frame = &runtime.dummy_cng_frame;
 			// switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_ERROR, "Media Paused!!!!\n");
 			return SWITCH_STATUS_SUCCESS;
 		}
-
+		// 错误处理 
 		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_ERROR, "%s has no read codec.\n", switch_channel_get_name(session->channel));
 		switch_channel_hangup(session->channel, SWITCH_CAUSE_INCOMPATIBLE_DESTINATION);
 		return SWITCH_STATUS_FALSE;
@@ -168,7 +168,7 @@ SWITCH_DECLARE(switch_status_t) switch_core_session_read_frame(switch_core_sessi
 		status = SWITCH_STATUS_BREAK;
 		goto even_more_done;
 	}
-
+	// 从session读取数据
 	if (session->endpoint_interface->io_routines->read_frame) {
 		switch_mutex_unlock(session->read_codec->mutex);
 		switch_mutex_unlock(session->codec_read_mutex);
@@ -282,6 +282,8 @@ SWITCH_DECLARE(switch_status_t) switch_core_session_read_frame(switch_core_sessi
 		}
 	}
 
+	//implementation 指向的是 switch_codec_implementation_t 结构，记录该编解码器当前使用的具体实现参数（采样率、编码时长、每帧字节数、编解码函数指针等）。
+	//这里通过解引用复制一份，用来比较帧携带的编解码实现与会话期望的实现是否一致，以决定是否需要转码或重采样。
 	codec_impl = *(*frame)->codec->implementation;
 
 	if (session->read_codec->implementation->impl_id != codec_impl.impl_id) {
@@ -293,6 +295,7 @@ SWITCH_DECLARE(switch_status_t) switch_core_session_read_frame(switch_core_sessi
 		do_resample = 1;
 	}
 
+	// 进行录音操作
 	if (tap_only) {
 		switch_media_bug_t *bp;
 		switch_bool_t ok = SWITCH_TRUE;
@@ -384,7 +387,7 @@ SWITCH_DECLARE(switch_status_t) switch_core_session_read_frame(switch_core_sessi
 		do_bugs = 0;
 		need_codec = 0;
 	}
-
+	// 如果需要转码，则进行转码
 	if (switch_test_flag(session, SSF_READ_TRANSCODE) && !need_codec && switch_core_codec_ready(session->read_codec)) {
 		switch_core_session_t *other_session;
 		const char *uuid = switch_channel_get_partner_uuid(switch_core_session_get_channel(session));

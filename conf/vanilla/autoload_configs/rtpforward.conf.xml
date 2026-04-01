@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    RTP Forward Module Configuration
+
+    本模块用于将会议参与者的 RTP 音视频流转发到外部目的地（如 VLC 或 WebSocket 服务器）
+    
+    WebSocket 配置说明:
+    - websocket-enabled: 是否启用 WebSocket 转发功能 (true/false)
+    - websocket-host: WebSocket 服务器地址
+    - websocket-port: WebSocket 服务器端口
+    - websocket-path: WebSocket 连接路径
+-->
+<configuration name="rtpforward.conf" description="RTP Forward Module Configuration">
+    <settings>
+        <!--
+            WebSocket 转发配置
+            用于将 RTP 流通过 WebSocket 发送到远程服务器
+        -->
+        <param name="websocket-enabled" value="true"/>
+        <param name="websocket-host" value="127.0.0.1"/>
+        <param name="websocket-port" value="8080"/>
+        <!--是否使用wss-->
+        <param name="websocket-ssl" value="false"/>
+
+        <param name="websocket-path" value="/ws"/>
+        <!-- 允许自签证书（true/false） -->
+        <param name="websocket-allow-self-signed" value="false"/>
+        <!-- 跳过证书主机名匹配检查（true/false），有些自签证书 CN 可能不匹配主机名 -->
+        <param name="websocket-skip-hostname-check" value="false"/>
+
+        <!-- 
+            断线重连配置
+        -->
+        <!-- 重连时间间隔（秒），连接断开后多久尝试重新连接 -->
+        <param name="reconnect-interval" value="5"/>
+        <!-- 最大重连次数，0 表示无限重连，-1 表示不重连 -->
+        <param name="max-retry-count" value="10"/>
+        <!-- 发送缓冲区大小（字节） -->
+        <param name="send-buffer-size" value="65536"/>
+        <!-- 连接超时时间（秒） -->
+        <param name="connect-timeout" value="10"/>
+        <!-- 重连退避策略：linear(线性) 或 exponential(指数退避) -->
+        <param name="reconnect-backoff" value="exponential"/>
+        <!-- 最大重连间隔（秒），用于指数退避策略 -->
+        <param name="max-reconnect-interval" value="60"/>
+    </settings>
+</configuration>

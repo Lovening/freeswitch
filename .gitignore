@@ -275,3 +275,17 @@ src/mod/codecs/mod_amrwb/test/test_amrwb
 src/mod/endpoints/mod_sofia/test/sipp-based-tests
 
 .DS_Store
+
+# CMake build system files
+/build/.cmake/
+/build/CMakeCache.txt
+/build/CMakeFiles/
+/build/build.ninja
+/build/rules.ninja
+/build/cmake_install.cmake
+
+# IDE and editor temporary files
+.vscode/bookmarks.json
+
+# Network capture files
+*.pcap

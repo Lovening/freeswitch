@@ -453,6 +453,10 @@ static switch_status_t switch_speex_destroy(switch_codec_t *codec)
 	decoding = (codec->flags & SWITCH_CODEC_FLAG_DECODE);
 
 	if (encoding) {
+		if (context->pp) {
+			speex_preprocess_state_destroy(context->pp);
+			context->pp = NULL;
+		}
 		speex_bits_destroy(&context->encoder_bits);
 		speex_encoder_destroy(context->encoder_state);
 	}

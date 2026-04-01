@@ -116,7 +116,7 @@ FST_SUITE_BEGIN(switch_eavesdrop)
 		switch_snprintf(eavesdrop_command, sizeof(eavesdrop_command),"uuid_setvar_multi %s eavesdrop_enable_dtmf=false;eavesdrop_whisper_bleg=true;eavesdrop_whisper_aleg=false", switch_core_session_get_uuid(session3));
 		switch_api_execute("bgapi", eavesdrop_command, session3, &stream);
 		memset(eavesdrop_command, 0, sizeof(eavesdrop_command));
-		switch_snprintf(eavesdrop_command, sizeof(eavesdrop_command), "uuid_transfer %s 'eavesdrop:%s' inline", switch_core_session_get_uuid(session3), switch_core_session_get_uuid(session2)); 
+		switch_snprintf(eavesdrop_command, sizeof(eavesdrop_command), "uuid_transfer %s 'eavesdrop:%s' inline", switch_core_session_get_uuid(session3), switch_core_session_get_uuid(session2));
 		switch_api_execute("bgapi", eavesdrop_command, session3, &stream);
 		switch_safe_free(stream.data);
 

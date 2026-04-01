@@ -549,6 +549,21 @@ AC_ARG_ENABLE(libvpx,
 
 AM_CONDITIONAL([ENABLE_LIBVPX],[test "${enable_libvpx}" = "yes"])
 
+AC_ARG_ENABLE(libavfilter,
+[AC_HELP_STRING([--disable-libavfilter],[build without FFmpeg libavfilter support])],[enable_libavfilter="$enableval"],[enable_libavfilter="yes"])
+
+if test "${enable_libavfilter}" = "yes" ; then
+    PKG_CHECK_MODULES([LIBAVFILTER], [libavfilter libavutil], [have_libavfilter="yes"], [have_libavfilter="no"])
+    if test "${have_libavfilter}" = "yes" ; then
+        AC_DEFINE([HAVE_LIBAVFILTER], [1], [Define if you have libavfilter])
+    else
+        AC_MSG_WARN([libavfilter not found, FFmpeg filter support will be disabled])
+        enable_libavfilter="no"
+    fi
+fi
+
+AM_CONDITIONAL([HAVE_LIBAVFILTER],[test "${enable_libavfilter}" = "yes"])
+
 AC_ARG_ENABLE(cpp,
 [AC_HELP_STRING([--disable-cpp],[build without cpp code])],[enable_cpp="$enableval"],[enable_cpp="yes"])
 
@@ -2037,6 +2052,7 @@ AC_CONFIG_FILES([Makefile
 		src/mod/applications/mod_vmd/Makefile
 		src/mod/applications/mod_voicemail/Makefile
 		src/mod/applications/mod_voicemail_ivr/Makefile
+    src/mod/applications/mod_rtpforward/Makefile
 		src/mod/asr_tts/mod_flite/Makefile
 		src/mod/asr_tts/mod_pocketsphinx/Makefile
 		src/mod/asr_tts/mod_tts_commandline/Makefile

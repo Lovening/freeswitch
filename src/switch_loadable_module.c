@@ -2941,7 +2941,7 @@ SWITCH_DECLARE(switch_status_t) switch_api_execute(const char *cmd, const char *
 	switch_assert(stream != NULL);
 	switch_assert(stream->data != NULL);
 	switch_assert(stream->write_function != NULL);
-
+	// 字符串不相同
 	if (strcasecmp(cmd, "console_complete")) {
 		cmd_used = switch_strip_whitespace(cmd);
 		arg_used = switch_strip_whitespace(arg);
@@ -2964,7 +2964,7 @@ SWITCH_DECLARE(switch_status_t) switch_api_execute(const char *cmd, const char *
 		}
 	}
 
-
+	// 调用 interface 执行命令,根据cmd_used 获取对应的接口，比如cmd_used="conference" 就会获取到 conf 接口
 	if (cmd_used && (api = switch_loadable_module_get_api_interface(cmd_used)) != 0) {
 		if ((status = api->function(arg_used, session, stream)) != SWITCH_STATUS_SUCCESS) {
 			stream->write_function(stream, "COMMAND RETURNED ERROR!\n");

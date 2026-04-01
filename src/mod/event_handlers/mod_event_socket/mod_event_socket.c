@@ -1707,7 +1707,7 @@ static void set_allowed_custom(listener_t *listener)
 		switch_core_hash_insert(listener->event_hash, (char *)var, MARKER);
 	}
 }
-
+// 解析命令行终端传过来的数据
 static switch_status_t parse_command(listener_t *listener, switch_event_t **event, char *reply, uint32_t reply_len)
 {
 	switch_status_t status = SWITCH_STATUS_SUCCESS;
@@ -2276,6 +2276,7 @@ static switch_status_t parse_command(listener_t *listener, switch_event_t **even
 		goto done;
 	} else if (!strncasecmp(cmd, "api ", 4)) {
 		struct api_command_struct acs = { 0 };
+		// 获取控制台执行标志  cmd = "api" 或 "auth" 或 "sendevent" 等
 		char *console_execute = switch_event_get_header(*event, "console_execute");
 
 		char *api_cmd = cmd + 4;

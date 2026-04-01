@@ -170,9 +170,7 @@ typedef enum {
 *         parameter is non-null, the value of the img parameter will be
 *         returned.
 */
-SWITCH_DECLARE(switch_image_t *)switch_img_alloc(switch_image_t  *img,
-						 switch_img_fmt_t fmt,
-						 unsigned int d_w,
+SWITCH_DECLARE(switch_image_t *)switch_img_alloc(switch_image_t  *img,switch_img_fmt_t fmt,unsigned int d_w,
 						 unsigned int d_h,
 						 unsigned int align);
 

@@ -121,14 +121,17 @@ static size_t file_callback(void *ptr, size_t size, size_t nmemb, void *data)
 	int x;
 
 	config_data->bytes += realsize;
-
+	// 检查是否超过最大字节数限制
 	if (config_data->bytes > config_data->max_bytes) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Oversized file detected [%d bytes]\n", (int) config_data->bytes);
 		config_data->err = 1;
 		return 0;
 	}
-
+	// 将数据写入文件
 	x = write(config_data->fd, ptr, realsize);
+	if(keep_files_around) {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "XML CURL Receive Data:\n%.*s\n", (int)realsize, (char *)ptr);
+	}
 	if (x != (int) realsize) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Short write! %d out of %d\n", x, realsize);
 	}
@@ -215,8 +218,9 @@ static switch_xml_t xml_url_fetch(const char *section, const char *tag_name, con
 
 	config_data.name = filename;
 	config_data.max_bytes = binding->curl_max_bytes;
-
+	// 构造请求
 	if ((config_data.fd = open(filename, O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR)) > -1) {
+		// 使用libcurl发起请求
 		curl_handle = switch_curl_easy_init();
 		headers = switch_curl_slist_append(headers, "Content-Type: application/x-www-form-urlencoded");
 
@@ -324,6 +328,7 @@ static switch_xml_t xml_url_fetch(const char *section, const char *tag_name, con
 
 	/* Debug by leaving the file behind for review */
 	if (keep_files_around) {
+
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "XML response is in %s\n", filename);
 	} else {
 		if (unlink(filename) != 0) {

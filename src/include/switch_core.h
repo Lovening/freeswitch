@@ -2571,9 +2571,9 @@ typedef enum {
 } cache_db_flag_t;
 
 typedef enum {
-	SCDB_TYPE_CORE_DB,
-	SCDB_TYPE_ODBC,
-	SCDB_TYPE_DATABASE_INTERFACE
+	SCDB_TYPE_CORE_DB, // 核心数据库（SQLite）
+	SCDB_TYPE_ODBC, // ODBC数据库
+	SCDB_TYPE_DATABASE_INTERFACE // 数据库接口
 } switch_cache_db_handle_type_t;
 
 typedef union {

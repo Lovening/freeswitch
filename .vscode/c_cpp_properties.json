@@ -4,7 +4,31 @@
       "name": "Linux",
       "compilerPath": "/usr/bin/cc",
       "compileCommands": "${workspaceFolder}/compile_commands.json",
-      "intelliSenseMode": "linux-gcc-x64"
+      "intelliSenseMode": "linux-gcc-x64",
+      "includePath": [
+        "${workspaceFolder}/src/include",
+        "${workspaceFolder}/libs/apr/include",
+        "${workspaceFolder}/libs/esl/src/include",
+        "${workspaceFolder}/libs/srtp/include",
+        "${workspaceFolder}/libs/srtp/crypto/include",
+        "${workspaceFolder}/libs/libnatpmp",
+        "${workspaceFolder}/libs/miniupnpc",
+        "${workspaceFolder}/libs/libteletone/src",
+        "${workspaceFolder}/libs/stb",
+        "${workspaceFolder}/libs/libyuv/include",
+        "${workspaceFolder}/libs/libvpx",
+        "${workspaceFolder}",
+        "/usr/include",
+        "/usr/local/include"
+      ],
+      "defines": [
+        "SWITCH_HAVE_YUV",
+        "SWITCH_HAVE_VPX",
+        "_GNU_SOURCE",
+        "HAVE_LIBAVFILTER"
+      ],
+      "cStandard": "c11",
+      "cppStandard": "c++11"
     }
   ],
   "version": 4

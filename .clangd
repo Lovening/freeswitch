@@ -1,0 +1,45 @@
+CompileFlags:
+  Add:
+    # FreeSWITCH 核心头文件路径
+    - "-I/home/ning/workSpace/freeswitch/src/include"
+    # APR 库路径（FreeSWITCH 依赖）
+    - "-I/home/ning/workSpace/freeswitch/libs/apr/include"
+    - "-I/home/ning/workSpace/freeswitch/libs/apr-util/include"
+    # 其他常用库
+    - "-I/home/ning/workSpace/freeswitch/libs/libtpl-1.5/src"
+    - "-I/home/ning/workSpace/freeswitch/libs/sqlite"
+    - "-I/home/ning/workSpace/freeswitch/libs/pcre"
+    - "-I/home/ning/workSpace/freeswitch/libs/srtp/include"
+    - "-I/home/ning/workSpace/freeswitch/libs/srtp/crypto/include"
+    # 系统标准库
+    - "-I/usr/include"
+    - "-I/usr/local/include"
+    # 启用 C99 标准
+    - "-std=c99"
+    - "-D_GNU_SOURCE"
+    # 启用可选功能（根据实际编译情况调整）
+    - "-DSWITCH_HAVE_YUV"
+    - "-DSWITCH_HAVE_VPX"
+    # 禁用某些警告以减少干扰
+    - "-Wno-unknown-pragmas"
+    - "-Wno-unused-parameter"
+  Remove:
+    # 移除一些可能导致问题的标志
+    - "-m*"
+    - "-f*san*"
+
+Diagnostics:
+  # 禁用某些不必要的诊断
+  ClangTidy:
+    Remove:
+      - "modernize-*"
+      - "readability-*"
+  UnusedIncludes: None
+  # 关闭头文件缺失的严格检查
+  Suppress:
+    - "*"
+
+# 索引配置
+Index:
+  Background: Build
+  StandardLibrary: Yes

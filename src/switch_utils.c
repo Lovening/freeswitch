@@ -2743,7 +2743,7 @@ static char *cleanup_separated_string(char *str, char delim)
 
 	return start;
 }
-
+// 分割字符串
 SWITCH_DECLARE(unsigned int) switch_separate_string_string(char *buf, char *delim, char **array, unsigned int arraylen)
 {
 	unsigned int count = 0;

@@ -126,7 +126,9 @@ api_command_t conference_api_sub_commands[] = {
 	{"vid-fgimg", (void_fn_t) & conference_api_sub_canvas_fgimg, CONF_API_SUB_ARGS_SPLIT, "vid-fgimg", "<file> | clear [<canvas-id>]"},
 	{"vid-bgimg", (void_fn_t) & conference_api_sub_canvas_bgimg, CONF_API_SUB_ARGS_SPLIT, "vid-bgimg", "<file> | clear [<canvas-id>]"},
 	{"vid-bandwidth", (void_fn_t) & conference_api_sub_vid_bandwidth, CONF_API_SUB_ARGS_SPLIT, "vid-bandwidth", "<BW>"},
-	{"vid-personal", (void_fn_t) & conference_api_sub_vid_personal, CONF_API_SUB_ARGS_SPLIT, "vid-personal", "[on|off]"}
+	{"vid-personal", (void_fn_t) & conference_api_sub_vid_personal, CONF_API_SUB_ARGS_SPLIT, "vid-personal", "[on|off]"},
+	{"record-member", (void_fn_t) & conference_api_sub_record_member, CONF_API_SUB_MEMBER_TARGET, "record-member", "<member_id|all|last> <filename>"},
+	{"stop-record-member", (void_fn_t) & conference_api_sub_stop_record_member, CONF_API_SUB_MEMBER_TARGET, "stop-record-member", "<member_id|all|last>"}
 };
 
 switch_status_t conference_api_sub_pause_play(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv)
@@ -3916,6 +3918,134 @@ switch_status_t conference_api_sub_recording(conference_obj_t *conference, switc
 			return SWITCH_STATUS_GENERR;
 		}
 	}
+}
+
+
+// add conference member record
+switch_status_t conference_api_sub_record_member(conference_member_t* member, switch_stream_handle_t* stream,void* user_data)
+{
+	switch_status_t status = SWITCH_STATUS_SUCCESS;
+	char *file_path = (char *)user_data;
+	switch_core_session_t *session = NULL;
+	switch_channel_t *channel = NULL;
+	switch_event_t* vars = NULL;
+
+	if (!member || !member->session) {
+		stream->write_function(stream, "-ERR Invalid member\n");
+		return SWITCH_STATUS_GENERR;
+	}
+	
+	session = member->session;
+	channel = switch_core_session_get_channel(session);
+
+	// 检查是否已经在录像了
+	if (member->member_record) {
+		stream->write_function(stream, "-ERR Member %d is already being recorded.\n", member->id);
+		return SWITCH_STATUS_GENERR;
+	}
+	// 指定路径或者使用默认的路径
+	if (zstr(file_path)) {
+		file_path = switch_core_session_sprintf(session, 
+            "/recordings/conf_%s_member_%u_%s.mp4",
+            member->conference->uuid_str,
+            member->id,
+            switch_core_session_get_uuid(session));
+	}
+
+    // 创建录像变量
+    switch_event_create(&vars, SWITCH_EVENT_CLONE);
+    
+    // 设置立体声录像 (左声道: 听到的/读流, 右声道: 说出的/写流)
+    switch_event_add_header_string(vars, SWITCH_STACK_BOTTOM, "RECORD_STEREO", "true");
+    
+    // 可选: 设置采样率
+    switch_event_add_header_string(vars, SWITCH_STACK_BOTTOM, "record_sample_rate", "16000");
+
+	status = switch_ivr_record_session_event(session, file_path, 0, NULL,vars);
+
+	if (status == SWITCH_STATUS_SUCCESS) {
+		// 更新成员状态
+		member->member_record_path = switch_core_strdup(member->pool, file_path);
+		member->member_record = SWITCH_TRUE;
+
+		// 设置通道变量
+		switch_channel_set_variable(channel,"member_recording_path",file_path);
+		switch_channel_set_variable_printf(channel,"member_recording","true");
+
+		stream->write_function(stream, "+OK Recording member %d to file %s\n", member->id, file_path);
+
+		// 触发事件
+		{
+			switch_event_t *event;
+			if (switch_event_create(&event,SWITCH_EVENT_CUSTOM) == SWITCH_STATUS_SUCCESS) {
+				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM,"Event-Subclass","conference::member_record_start");
+				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Conference-Name",member->conference->name);
+				switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Member-ID", "%u", member->id);
+				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Conference-UUID", member->conference->uuid_str);
+				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Recording-Path", file_path);
+				switch_event_fire(&event);
+			}
+
+		} 
+	}	
+	
+	switch_event_destroy(&vars);
+	return status;
+
+}
+
+switch_status_t conference_api_sub_stop_record_member(conference_member_t* member, switch_stream_handle_t* stream, void* user_data) {
+
+	switch_status_t status = SWITCH_STATUS_SUCCESS;
+    switch_core_session_t *session = NULL;
+    switch_channel_t *channel = NULL;
+
+	if (!member || !member->session) {
+		stream->write_function(stream, "-ERR Invalid member\n");
+		return SWITCH_STATUS_GENERR;
+	}
+
+	session = member->session;
+	channel = switch_core_session_get_channel(session);
+
+	if (!session || !channel) {
+		stream->write_function(stream, "-ERR Invalid session or channel\n");
+		return SWITCH_STATUS_GENERR;
+	}
+
+	if (! member->member_record || zstr(member->member_record_path)) {
+		stream->write_function(stream, "-ERR Member %u is not recording\n", member->id);
+        return SWITCH_STATUS_FALSE;
+	}
+
+	// 停止录像
+    status = switch_ivr_stop_record_session(session, member->member_record_path);
+
+	if (status == SWITCH_STATUS_SUCCESS) {
+        stream->write_function(stream, "+OK Stopped recording member %u (file: %s)\n", 
+                              member->id, member->member_record_path);
+        
+        // 触发事件
+        {
+            switch_event_t *event;
+            if (switch_event_create(&event, SWITCH_EVENT_CUSTOM) == SWITCH_STATUS_SUCCESS) {
+                switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Event-Subclass", "conference::member_record_stop");
+                switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Conference-Name", member->conference->name);
+                switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Conference-UUID", member->conference->uuid_str);
+                switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Member-ID", "%u", member->id);
+                switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Recording-Path", member->member_record_path);
+                switch_event_fire(&event);
+            }
+        }
+        
+        // 清理状态
+        member->member_record = SWITCH_FALSE;
+        switch_channel_set_variable(channel, "member_recording", "false");
+    } else {
+        stream->write_function(stream, "-ERR Failed to stop recording for member %u\n", member->id);
+    }
+    
+    return status;
 }
 
 switch_status_t conference_api_sub_file_vol(conference_obj_t *conference, switch_stream_handle_t *stream, int argc, char **argv)

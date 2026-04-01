@@ -532,7 +532,7 @@ SWITCH_DECLARE(switch_call_cause_t) switch_core_session_outgoing_channel(switch_
 	switch_call_cause_t cause = SWITCH_CAUSE_REQUESTED_CHAN_UNAVAIL;
 	const char *forwardvar;
 	int forwardval = 70;
-
+	// sofia verto user
 	if ((endpoint_interface = switch_loadable_module_get_endpoint_interface(endpoint_name)) == 0) {
 		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_ERROR, "Could not locate channel type %s\n", endpoint_name);
 		return SWITCH_CAUSE_CHAN_NOT_IMPLEMENTED;
@@ -1774,7 +1774,7 @@ static void *SWITCH_THREAD_FUNC switch_core_session_thread(switch_thread_t *thre
 typedef struct switch_thread_pool_node_s {
 	switch_memory_pool_t *pool;
 } switch_thread_pool_node_t;
-
+// work 线程池 从线程池中取出一个任务进行执行
 static void *SWITCH_THREAD_FUNC switch_core_session_thread_pool_worker(switch_thread_t *thread, void *obj)
 {
 	switch_thread_pool_node_t *node = (switch_thread_pool_node_t *) obj;
