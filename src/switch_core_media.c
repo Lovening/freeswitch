@@ -43,6 +43,21 @@
 
 #include <stdbool.h>
 
+/**
+ * SIP 信令层（mod_sofia）和底层 RTP 传输层之间的桥梁。
+ *
+ * ┌─────────────────────────────┐
+│  SIP 信令层 (mod_sofia)      │  ← 处理 INVITE/200 OK/INFO 等
+├─────────────────────────────┤
+│  switch_core_media.c         │  ← 本文件：SDP协商、RTP管理、编解码选择
+├─────────────────────────────┤
+│  switch_rtp.c                │  ← 底层 RTP 收发、jitter buffer
+└─────────────────────────────┘
+
+ *
+ *
+ */
+
 static switch_t38_options_t* switch_core_media_process_udptl(switch_core_session_t* session,
                                                              sdp_session_t* sdp, sdp_media_t* m);
 static void switch_core_media_set_r_sdp_codec_string(switch_core_session_t* session,
@@ -6104,19 +6119,38 @@ switch_core_media_negotiate_sdp(switch_core_session_t* session, const char* r_sd
             }
 
             if (best_te) {
-                smh->mparams->te_rate = best_te_rate;
+                const char *dtmf_type_var;
+                switch_bool_t force_info;
 
-                if (smh->mparams->dtmf_type == DTMF_AUTO || smh->mparams->dtmf_type == DTMF_2833 ||
-                    switch_channel_test_flag(session->channel, CF_LIBERAL_DTMF)) {
+                smh->mparams->te_rate = best_te_rate;
+                dtmf_type_var = switch_channel_get_variable(session->channel, "dtmf_type");
+                force_info = (switch_bool_t)(dtmf_type_var && !strcasecmp(dtmf_type_var, "info"));
+
+                // if (smh->mparams->dtmf_type == DTMF_AUTO || smh->mparams->dtmf_type == DTMF_2833 ||
+                //     switch_channel_test_flag(session->channel, CF_LIBERAL_DTMF)) {
+                //     if (sdp_type == SDP_OFFER) {
+                //         smh->mparams->te = smh->mparams->recv_te = (switch_payload_t)best_te;
+                //         switch_channel_set_variable(session->channel, "dtmf_type", "rfc2833");
+                //         smh->mparams->dtmf_type = DTMF_2833;
+                //     } else {
+                //         smh->mparams->te = (switch_payload_t)best_te;
+                //         switch_channel_set_variable(session->channel, "dtmf_type", "rfc2833");
+                //         smh->mparams->dtmf_type = DTMF_2833;
+                //     }
+                // }
+
+                if (!force_info && (smh->mparams->dtmf_type == DTMF_AUTO || smh->mparams->dtmf_type == DTMF_2833 ||
+                    switch_channel_test_flag(session->channel, CF_LIBERAL_DTMF))) {
                     if (sdp_type == SDP_OFFER) {
-                        smh->mparams->te = smh->mparams->recv_te = (switch_payload_t)best_te;
-                        switch_channel_set_variable(session->channel, "dtmf_type", "rfc2833");
-                        smh->mparams->dtmf_type = DTMF_2833;
+                    smh->mparams->te = smh->mparams->recv_te = (switch_payload_t)best_te;
                     } else {
                         smh->mparams->te = (switch_payload_t)best_te;
-                        switch_channel_set_variable(session->channel, "dtmf_type", "rfc2833");
-                        smh->mparams->dtmf_type = DTMF_2833;
                     }
+                    switch_channel_set_variable(session->channel, "dtmf_type", "rfc2833");
+                    smh->mparams->dtmf_type = DTMF_2833;
+                } else if (force_info) {
+                    switch_channel_set_variable(session->channel, "dtmf_type", "info");
+                    smh->mparams->dtmf_type = DTMF_INFO;
                 }
 
                 if (a_engine->rtp_session) {
