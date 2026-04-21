@@ -815,81 +815,81 @@ struct sofia_profile {
     uint8_t rfc8760_algs_count;
     sofia_auth_algs_t auth_algs[SOFIA_MAX_REG_ALGS];
 };
-
+// 每一条 SIP 会话（session）都会关联一个 private_object_t 实例 通过 switch_core_session_set_private(session, tech_pvt) 挂载到 session 上
 struct private_object {
-    sofia_private_t* sofia_private;
-    uint8_t flags[TFLAG_MAX];
-    switch_core_session_t* session;
-    switch_channel_t* channel;
-    switch_media_handle_t* media_handle;
-    switch_core_media_params_t mparams;
-    switch_caller_profile_t* caller_profile;
-    sofia_profile_t* profile;
-    char* reply_contact;
-    char* from_uri;
-    char* from_user;
-    char* to_uri;
-    char* callid;
-    char* contact_url;
-    char* from_str;
-    char* rpid;
-    char* asserted_id;
-    char* preferred_id;
-    char* privacy;
-    char* gateway_from_str;
-    char* dest;
-    char* dest_to;
-    char* key;
-    char* kick;
-    char* origin;
-    char* hash_key;
-    char* chat_from;
-    char* chat_to;
-    char* e_dest;
-    char* call_id;
-    char* invite_contact;
-    char* local_url;
-    char* gateway_name;
-    char* record_route;
-    char* route_uri;
-    char* x_freeswitch_support_remote;
-    char* x_freeswitch_support_local;
-    char* last_sent_callee_id_name;
-    char* last_sent_callee_id_number;
-    char* proxy_refer_uuid;
-    msg_t* proxy_refer_msg;
-    switch_mutex_t* flag_mutex;
-    switch_mutex_t* sofia_mutex;
-    switch_payload_t te;
-    switch_payload_t recv_te;
-    switch_payload_t bte;
-    switch_payload_t cng_pt;
-    switch_payload_t bcng_pt;
-    sofia_transport_t transport;
-    nua_handle_t* nh;
-    nua_handle_t* nh2;
-    sip_contact_t* contact;
-    int q850_cause;
-    int got_bye;
-    int sent_100;
-    nua_event_t want_event;
-    switch_rtp_bug_flag_t rtp_bugs;
-    char* user_via;
-    char* redirected;
-    sofia_cid_type_t cid_type;
-    uint32_t session_timeout;
-    enum nua_session_refresher session_refresher;
-    int update_refresher;
-    char** watch_headers;
-    char* respond_phrase;
-    int respond_code;
-    char* respond_dest;
-    switch_time_t last_vid_info;
-    uint32_t keepalive;
-    uint32_t sent_invites;
-    uint32_t recv_invites;
-    uint8_t sent_last_invite;
-    uint32_t req_media_counter;
+    sofia_private_t* sofia_private; //Sofia 内部私有数据，包含 nuamagic 等标识，用于区分 event 来自哪个 profile/session
+    uint8_t flags[TFLAG_MAX]; //状态标志位数组（如 TFLAG_AUDIO、TFLAG_VIDEO、TFLAG_ANS 等），通过 sofia_set_flag/sofia_test_flag 宏操作，是 sofia 状态机的核心
+    switch_core_session_t* session; // 反向指针，指回所属的 FreeSWITCH session。很多函数只接收 tech_pvt，通过它访问 session
+    switch_channel_t* channel; // 指向 session 的 channel，用于读写通道变量、状态变更。缓存起来避免反复调用 switch_core_session_get_channel()
+    switch_media_handle_t* media_handle; // 媒体协商句柄，管理 SDP 协商、编解码选择等。FreeSWITCH 的 SDP 处理核心
+    switch_core_media_params_t mparams; // 媒体参数集合（编解码列表、RTP 地址/端口、SRTP 参数等）。嵌入式结构体，不是指针——直接内存在 private_object 中
+    switch_caller_profile_t* caller_profile; // 主叫身份信息（caller_id_name/number、ANI、DNIS、RDNIS 等）。拨号方案中读取的 caller/callee 信息都来自这里
+    sofia_profile_t* profile; // 所属的 Sofia SIP Profile（如 "internal"、"external"）。包含该 profile 的全部配置：SIP IP、端口、编解码、网关列表等
+    char* reply_contact; // 回复用的 Contact 头，来自入站 INVITE 的 Contact 或本地构造
+    char* from_uri; // 远端发来的 From URI（user@host）
+    char* from_user; // 远端的 From 用户名部分
+    char* to_uri; // 本地 To URI
+    char* callid; // SIP Call-ID 头的值
+    char* contact_url; // 本端 Contact URL 字符串
+    char* from_str; //出站 INVITE 的 From 头。在 sofia_glue_do_invite() 中由 caller_id_name + caller_id_number + sipip 拼接而成
+    char* rpid; // Remote-Party-ID 头内容，传递信任的主叫身份
+    char* asserted_id; // P-Asserted-Identity 头内容，用于 ISUP/SIP 网间透传可信主叫号码
+    char* preferred_id; // P-Preferred-Identity 头内容，终端表达期望的呈现身份
+    char* privacy; // Privacy 头值（如 id、user、none），控制号码隐藏
+    char* gateway_from_str; // 网关预设的 From 头。从网关的 register_from 复制而来，优先级高于 from_str
+    char* dest; // 出站 INVITE 的目标 URI（Request-URI）
+    char* dest_to; // 出站 INVITE 的 To 头
+    char* key; // 哈希表中的 key，用于 session 查找
+    char* kick; // 踢人操作的标识
+    char* origin; // 呼叫来源描述
+    char* hash_key; // 哈希表中的 key，用于 session 查找（与 key 类似，但可能包含更多信息，如协议前缀）
+    char* chat_from; // SIP MESSAGE 的来源/目标
+    char* chat_to; // SIP MESSAGE 的来源/目标
+    char* e_dest; // 编码后的目标号码
+    char* call_id; // 自定义 Call-ID（用于覆盖自动生成的）
+    char* invite_contact; // 	出站 INVITE 使用的 Contact 头
+    char* local_url; // 本地 SIP URL
+    char* gateway_name; // 所使用的网关名称
+    char* record_route; // 	Record-Route 头值（对话内后续请求的路由）
+    char* route_uri; // 路由 URI（用于 outbound proxy / Route 头）
+    char* x_freeswitch_support_remote; // 对端支持的 X-Freeswitch 特性
+    char* x_freeswitch_support_local; // 本端支持的 X-Freeswitch 特性
+    char* last_sent_callee_id_name; // 最后发送的被叫名/号（用于 UPDATE 场景避免重复）
+    char* last_sent_callee_id_number; // 最后发送的被叫名/号（用于 UPDATE 场景避免重复）
+    char* proxy_refer_uuid; // 代理 REFER 的目标 UUID 和原始消息
+    msg_t* proxy_refer_msg; // 代理 REFER 的目标 UUID 和原始消息
+    switch_mutex_t* flag_mutex; // 互斥锁，保护 flags 和 Sofia 操作的线程安全
+    switch_mutex_t* sofia_mutex; // 互斥锁，保护 flags 和 Sofia 操作的线程安全
+    switch_payload_t te; // 出站电话事件（telephone-event）的 RTP payload type，即 DTMF 的 payload 号
+    switch_payload_t recv_te; // 对端协商来的 DTMF payload type
+    switch_payload_t bte; // 备用 DTMF payload type（bridge 场景）
+    switch_payload_t cng_pt; // Comfort Noise Generator 的 payload type（主用/备用）
+    switch_payload_t bcng_pt; // Comfort Noise Generator 的 payload type（主用/备用）
+    sofia_transport_t transport; // SIP 传输层类型枚举（UDP / TCP / TLS / WS / WSS）
+    nua_handle_t* nh; // 主 NUA handle，代表当前 SIP 对话。所有 INVITE/BYE/re-INVITE 都通过它发送
+    nua_handle_t* nh2; // 第二 NUA handle，用于 REFER 转接时创建的新对话（attended transfer）
+    sip_contact_t* contact; // 解析后的 SIP Contact 结构体指针（libsofia 解析结果）
+    int q850_cause; // Q.850 挂断原因码（如 16=Normal, 17=Busy, 21=Rejected）
+    int got_bye; // 是否已收到 BYE（防止重复处理）
+    int sent_100; // 是否已发送 100 Trying
+    nua_event_t want_event; // 当前等待的特定 NUA 事件（用于异步流程控制）
+    switch_rtp_bug_flag_t rtp_bugs; // RTP 兼容性补丁标志位（处理非标准 RTP 实现）
+    char* user_via; // 自定义 Via 头（用于穿越特定代理）
+    char* redirected; // 重定向目标 URI（302 响应后记录）
+    sofia_cid_type_t cid_type; // 主叫身份透传方式（RPID / PID / 无）
+    uint32_t session_timeout; // SIP Session-Expires 值（秒），控制 re-INVITE 刷新间隔
+    enum nua_session_refresher session_refresher; // 谁发起 session refresh（nua_local_refresher / nua_remote_refresher）
+    int update_refresher; // 是否用 UPDATE 方法代替 re-INVITE 做刷新
+    char** watch_headers; // 需要监控变化的 SIP 头列表
+    char* respond_phrase; // SIP 响应缓存（原因短语、状态码、目标）
+    int respond_code; // SIP 响应缓存（原因短语、状态码、目标）
+    char* respond_dest; // SIP 响应缓存（原因短语、状态码、目标）
+    switch_time_t last_vid_info; // 最后视频信息更新时间戳
+    uint32_t keepalive; // NAT 保活间隔（秒），向对端发送空包保持 NAT 映射
+    uint32_t sent_invites; //发送/接收的 INVITE 计数器（调试用）
+    uint32_t recv_invites; // 发送/接收的 INVITE 计数器（调试用）
+    uint8_t sent_last_invite; // 是否已发送了最后的 INVITE（用于防止重复发送）
+    uint32_t req_media_counter; // 媒体请求计数器，防止重复处理媒体请求
 };
 
 struct callback_t {
