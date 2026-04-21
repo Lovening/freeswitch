@@ -840,7 +840,7 @@ void conference_video_scale_and_patch(mcu_layer_t* layer, switch_image_t* ximg,
             switch_mutex_unlock(layer->overlay_mutex);
         }
 
-        // 判断设备是否需要拉伸
+        // 判断设备是否需要拉伸 只有安全帽设备需要拉伸
         if (layer->member && layer->member->channel) {
             const char *scale_var = switch_channel_get_variable(layer->member->channel, "is_scale");
     
@@ -2091,7 +2091,7 @@ void conference_video_write_canvas_image_to_codec_group(
 
     } while (encode_status == SWITCH_STATUS_MORE_DATA);
 }
-
+// 寻找会议的最佳布局
 video_layout_t* conference_video_find_best_layout(conference_obj_t* conference, layout_group_t* lg,
                                                   uint32_t count, uint32_t file_count) {
     video_layout_node_t *vlnode = NULL, *last = NULL, *least = NULL;
@@ -3249,7 +3249,6 @@ switch_status_t conference_video_change_res(conference_obj_t* conference, int w,
 }
 // 会议视频渲染线程
 void* SWITCH_THREAD_FUNC
-
 conference_video_muxing_thread_run(switch_thread_t* thread, void* obj) {
     mcu_canvas_t* canvas = (mcu_canvas_t*)obj;
     conference_obj_t* conference = canvas->conference;
@@ -3299,7 +3298,7 @@ conference_video_muxing_thread_run(switch_thread_t* thread, void* obj) {
                 switch_mutex_unlock(conference->canvas_mutex);
             }
         }
-
+        // 定时器重置
         if (canvas->video_timer_reset) {
             canvas->video_timer_reset = 0;
 
@@ -3336,7 +3335,7 @@ conference_video_muxing_thread_run(switch_thread_t* thread, void* obj) {
             files_playing = 1;
         }
         switch_mutex_unlock(conference->file_mutex);
-
+        // 两人桥接模式
         if (conference_utils_test_flag(conference, CFLAG_VIDEO_BRIDGE_FIRST_TWO)) {
             if (conference->members_seeing_video < 3 && !file_count) {
                 conference->mux_paused = 1;
@@ -5035,9 +5034,9 @@ void conference_video_set_floor_holder(conference_obj_t* conference, conference_
         conference_utils_clear_flag(conference, CFLAG_VID_FLOOR_LOCK);
     }
 
-    if (conference->canvas_count > 1) {
-        return;
-    }
+    // if (conference->canvas_count > 1) {
+    //     return;
+    // }
 
     if (member && conference_utils_member_test_flag(member, MFLAG_DED_VID_LAYER)) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
@@ -5132,6 +5131,24 @@ void conference_video_set_floor_holder(conference_obj_t* conference, conference_
         switch_core_session_video_reinit(imember->session);
     }
     switch_mutex_unlock(conference->member_mutex);
+
+    // 取消了 conference->canvas_count > 1 的限制，允许在多画布模式下切换视频主讲人
+    if (conference->canvas_count > 1) {
+        uint32_t i;
+
+        switch_mutex_lock(conference->canvas_mutex);
+        for (i = 0; i <= conference->canvas_count; i++) {
+            mcu_canvas_t *canvas = conference->canvases[i];
+
+            if (!canvas) {
+                continue;
+            }
+
+            canvas->refresh = 1;
+            canvas->send_keyframe = 10;
+        }
+        switch_mutex_unlock(conference->canvas_mutex);
+    }
 
     conference_utils_set_flag(conference, CFLAG_FLOOR_CHANGE);
 
