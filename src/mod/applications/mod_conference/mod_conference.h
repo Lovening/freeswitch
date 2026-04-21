@@ -178,54 +178,54 @@ typedef struct caller_control_menu_info {
 } caller_control_menu_info_t;
 
 typedef enum {
-	MFLAG_RUNNING,
-	MFLAG_CAN_SPEAK,
-	MFLAG_CAN_HEAR,
-	MFLAG_KICKED,
-	MFLAG_ITHREAD,
-	MFLAG_NOCHANNEL,
-	MFLAG_INTREE,
-	MFLAG_NO_MINIMIZE_ENCODING,
-	MFLAG_FLUSH_BUFFER,
-	MFLAG_ENDCONF,
-	MFLAG_MANDATORY_MEMBER_ENDCONF,
-	MFLAG_HAS_AUDIO,
-	MFLAG_TALKING,
-	MFLAG_RESTART,
-	MFLAG_MINTWO,
-	MFLAG_MUTE_DETECT,
-	MFLAG_DIST_DTMF,
-	MFLAG_MOD,
-	MFLAG_INDICATE_MUTE,
-	MFLAG_INDICATE_UNMUTE,
-	MFLAG_INDICATE_BLIND,
-	MFLAG_INDICATE_UNBLIND,
-	MFLAG_NOMOH,
-	MFLAG_VIDEO_BRIDGE,
-	MFLAG_INDICATE_MUTE_DETECT,
-	MFLAG_PAUSE_RECORDING,
-	MFLAG_ACK_VIDEO,
-	MFLAG_GHOST,
-	MFLAG_JOIN_ONLY,
-	MFLAG_POSITIONAL,
-	MFLAG_NO_POSITIONAL,
-	MFLAG_JOIN_VID_FLOOR,
-	MFLAG_RECEIVING_VIDEO,
-	MFLAG_CAN_SEE,
-	MFLAG_CAN_BE_SEEN,
-	MFLAG_SECOND_SCREEN,
-	MFLAG_SILENT,
-	MFLAG_FLIP_VIDEO,
-	MFLAG_ROTATE_VIDEO,
-	MFLAG_MIRROR_VIDEO,
-	MFLAG_INDICATE_DEAF,
-	MFLAG_INDICATE_UNDEAF,
+	MFLAG_RUNNING,  // 成员的会议线程是否在运行。成员加入时置 1，离开/踢出时清 0，是整个成员事件循环的生命周期标志
+	MFLAG_CAN_SPEAK, // 成员是否可以说话（发送音频）。被 mute 时清 0，unmute 时置 1
+	MFLAG_CAN_HEAR, // 成员是否可以听到其他人（接收音频）。被 deaf 时清 0，undeaf 时置 1
+	MFLAG_KICKED, // 成员已被踢出会议。设置后成员的循环会检测到并退出
+	MFLAG_ITHREAD, //  标记输入线程已启动。用于防止重复启动输入线程，输入线程退出时清除
+	MFLAG_NOCHANNEL, //  成员没有关联的通道（channel-less member）。用于虚拟成员（如录音、文件播放等不绑定 session 的成员）
+	MFLAG_INTREE, //  成员已在会议成员树中（已加入成员链表）。用于判断成员是否处于活跃状态
+	MFLAG_NO_MINIMIZE_ENCODING, //禁用最小化编码优化。每个成员使用独立编码器而非共享编码，由 video_use_dedicated_encoder 通道变量设置
+	MFLAG_FLUSH_BUFFER, // 刷新音频缓冲区标志。用于音频重置时清空积压数据
+	MFLAG_ENDCONF, // 此成员离开时自动结束整个会议。通常用于会议创建者或主持人
+	MFLAG_MANDATORY_MEMBER_ENDCONF, // 此成员是"强制结束会议成员"。当所有带此标志的成员都离开后，会议才结束
+	MFLAG_HAS_AUDIO, // 成员当前有音频数据到来。在音频处理循环中动态设置/清除
+	MFLAG_TALKING, // 成员正在说话（检测到能量超过阈值）。用于讲话者事件通知和视频 floor 切换
+	MFLAG_RESTART, //代码中已定义但未使用的死枚举值
+	MFLAG_MINTWO, // 至少两个人在此成员发言时才能听到（min-two 模式）
+	MFLAG_MUTE_DETECT, // 启用静音检测。当成员被 mute 但试图说话时，触发事件通知
+	MFLAG_DIST_DTMF, // 将 DTMF 透传/分发给其他成员。默认会议会消费 DTMF 用于控制，此标志让 DTMF 继续传递
+	MFLAG_MOD, // MFLAG_MOD
+	MFLAG_INDICATE_MUTE, // 一次性标志：触发播放 mute 提示音（如"您已被静音"），播放后自动清除
+	MFLAG_INDICATE_UNMUTE, //一次性标志：触发播放 unmute 提示音
+	MFLAG_INDICATE_BLIND, //一次性标志：触发播放 deaf（视频盲）提示音，播放 deaf_sound
+	MFLAG_INDICATE_UNBLIND, // 一次性标志：触发播放 undeaf 提示音
+	MFLAG_NOMOH, //不播放等待音乐（Music On Hold），即使会议只有一个人
+	MFLAG_VIDEO_BRIDGE, //成员使用视频桥接模式（直接转发而非 MCU 混合），跳过画布渲染
+	MFLAG_INDICATE_MUTE_DETECT, //一次性标志：触发播放"您正在静音状态下试图说话"的提示音
+	MFLAG_PAUSE_RECORDING, // 暂停此成员的录音
+	MFLAG_ACK_VIDEO, // 已确认/接收过视频。首次收到视频帧时设置，用于从头像切换到真实视频
+	MFLAG_GHOST, // 幽灵成员：存在于会议中但不被其他成员感知，常用于监听/录音
+	MFLAG_JOIN_ONLY, // 只加入模式，不启动音频/视频处理线程
+	MFLAG_POSITIONAL, // 启用位置音频（3D 空间音频），根据成员在虚拟空间的位置调整音量和左右声道
+	MFLAG_NO_POSITIONAL, // 显式禁用位置音频，即使会议配置了位置音频
+	MFLAG_JOIN_VID_FLOOR, // 加入会议后自动抢占视频 floor（成为视频主讲人）
+	MFLAG_RECEIVING_VIDEO, //成员正在接收视频流。用于视频流状态跟踪
+	MFLAG_CAN_SEE, // 成员是否可以看到其他人的视频。类似音频的 deaf，这是视频的"接收"控制
+	MFLAG_CAN_BE_SEEN, // 成员是否可以被其他人看到（发送视频）。vmute 时清 0，unvmute 时置 1。我们之前分析过
+	MFLAG_SECOND_SCREEN, // 第二屏幕模式：只看视频不参与音频互动。设置时自动清除 CAN_SPEAK、CAN_HEAR、CAN_BE_SEEN
+	MFLAG_SILENT, // 成员静默加入/离开，不播放进入/退出提示音
+	MFLAG_FLIP_VIDEO, //水平翻转视频画面
+	MFLAG_ROTATE_VIDEO, // 旋转视频画面
+	MFLAG_MIRROR_VIDEO, // 镜像视频画面（通常用于自拍视角）
+	MFLAG_INDICATE_DEAF, // 一次性标志：触发播放 deaf 提示音（音频层面）
+	MFLAG_INDICATE_UNDEAF, // 一次性标志：触发播放 undeaf 提示音
 	MFLAG_TALK_DATA_EVENTS,
-	MFLAG_NO_VIDEO_BLANKS,
-	MFLAG_VIDEO_JOIN,
-	MFLAG_DED_VID_LAYER,
-	MFLAG_HOLD,
-	MFLAG_SKIP_DTMF,
+	MFLAG_NO_VIDEO_BLANKS, //不发送视频空白帧（blank 帧），保持最后一帧
+	MFLAG_VIDEO_JOIN, //标记已完成视频加入流程
+	MFLAG_DED_VID_LAYER, //使用专属视频层（dedicated video layer），不参与自动层分配和 floor 切换，始终占据一个固定的画面位置
+	MFLAG_HOLD, //成员处于挂起状态（hold），既不发送也不接收音视频
+	MFLAG_SKIP_DTMF, // 完全跳过/忽略 DTMF 处理。DTMF 既不触发会议控制，也不传递
 	///////////////////////////
 	MFLAG_MAX
 } member_flag_t;
@@ -557,6 +557,8 @@ typedef struct mcu_layer_s {
 	switch_bool_t filter_last_can_speak; /* 上一帧的静音状态，用于检测变化 */
 	int64_t filter_pts;               /* 当前送入 filter 的 pts */
 	int64_t filter_pts_step;          /* 每帧 pts 增量，单位是 1/90000 */
+	int filter_net_frame_count;       /* 网络状态采样帧计数器（每30帧采样一次） */
+	char filter_net_text[64];         /* 上次用于构建 filter 的网络状态文本 */
 #endif
 } mcu_layer_t;
 
@@ -581,53 +583,53 @@ typedef struct layout_group_s {
 } layout_group_t;
 
 typedef struct codec_set_s {
-	switch_codec_t codec;
-	switch_frame_t frame;
-	uint8_t *packet;
-	switch_image_t *scaled_img;
-	uint8_t fps_divisor;
-	uint32_t frame_count;
-	char *video_codec_group;
+	switch_codec_t codec;  // 编码器实例
+	switch_frame_t frame; // 编码输出帧
+	uint8_t *packet;  // RTP 包缓冲
+	switch_image_t *scaled_img;  // 缩放中间图像（用于非标分辨率编码）
+	uint8_t fps_divisor; // 帧率除数（降低编码帧率）
+	uint32_t frame_count;  // 帧计数
+	char *video_codec_group;  // 编码器组名
 } codec_set_t;
 
 
 typedef struct mcu_canvas_s {
-	int width;
-	int height;
-	switch_image_t *img;
-	mcu_layer_t layers[MCU_MAX_LAYERS];
-	int res_count;
-	int role_count;
-	int total_layers;
-	int layers_used;
-	int layout_floor_id;
-	int refresh;
-	int send_keyframe;
-	int play_file;
-	int video_count;
-	char *video_layout_group;
-	switch_rgb_color_t bgcolor;
-	switch_rgb_color_t border_color;
-	switch_rgb_color_t letterbox_bgcolor;
-	switch_mutex_t *mutex;
-	switch_mutex_t *write_mutex;
-	switch_timer_t timer;
-	switch_memory_pool_t *pool;
-	video_layout_t *vlayout;
-	video_layout_t *new_vlayout;
-	int canvas_id;
-	struct conference_obj *conference;
-	switch_thread_t *video_muxing_thread;
-	int video_timer_reset;
-	switch_queue_t *video_queue;
-	int recording;
-	switch_image_t *bgimg;
-	switch_image_t *fgimg;
-	int playing_video_file;
-	int overlay_video_file;
-	codec_set_t *write_codecs[MAX_MUX_CODECS];
-	int write_codecs_count;
-	switch_bool_t disable_auto_clear;
+	int width; // 画布宽度（像素），默认 1280
+	int height; // 画布高度（像素），默认 720
+	switch_image_t *img; //  画布主图像（I420/YUV420P 格式）
+	mcu_layer_t layers[MCU_MAX_LAYERS]; //图层数组，最多 64 个槽位
+	int res_count; // 使用 reservation_id 预留的层数
+	int role_count;  // 使用 role_id 角色绑定的层数
+	int total_layers;  // 当前布局定义的总层数
+	int layers_used; // 当前已被成员占用的层数
+	int layout_floor_id; // 发言权(floor)对应的图层索引，-1 表示无
+	int refresh; // 标志：画布需要刷新（重绘）
+	int send_keyframe;  // 关键帧请求倒计数（每10帧触发一次）
+	int play_file; // 文件播放状态机: 0=无, 1=开始播放, -1=播放中
+	int video_count;   // 当前有视频的成员数
+	char *video_layout_group; // 当前使用的布局组名（如 "grid"）
+	switch_rgb_color_t bgcolor; // 画布背景色（无视频区域）
+	switch_rgb_color_t border_color;  // 图层边框颜色
+	switch_rgb_color_t letterbox_bgcolor;  // 宽高比不匹配时的黑边颜色
+	switch_mutex_t *mutex;  // 画布主锁（保护图层操作）
+	switch_mutex_t *write_mutex; // 写入锁（保护编码器写入）
+	switch_timer_t timer;  // 帧率定时器（默认 soft 33ms/30fps）
+	switch_memory_pool_t *pool;   // 内存池（从 conference 继承）
+	video_layout_t *vlayout; // 当前生效的布局配置
+	video_layout_t *new_vlayout; // 待切换的新布局（过渡用）
+	int canvas_id;    // 画布编号（0 到 canvas_count-1）
+	struct conference_obj *conference; // 所属会议的反向引用
+	switch_thread_t *video_muxing_thread;  // 融合主线程句柄
+	int video_timer_reset;    // 标志：是否需要重置帧率定时器
+	switch_queue_t *video_queue;  // 视频帧队列（多画布时传递给 super canvas）
+	int recording;  // 是否正在录像（写入文件）
+	switch_image_t *bgimg;  // 背景图片（如会议背景图/PNG）
+	switch_image_t *fgimg;   // 前景图片（如水印、Logo，半透明叠加）
+	int playing_video_file; // 是否正在播放视频文件（全屏覆盖）
+	int overlay_video_file; // 是否以叠加模式播放视频文件（半透明覆盖）
+	codec_set_t *write_codecs[MAX_MUX_CODECS];  // 编码器集合（按 codec 分组）
+	int write_codecs_count;  // 已注册的编码器数量
+	switch_bool_t disable_auto_clear;  // 禁止自动清除图层（保留上一帧）
 } mcu_canvas_t;
 
 /* Record Node */
@@ -649,175 +651,175 @@ typedef enum {
 
 /* Conference Object */
 typedef struct conference_obj {
-	char *name;
-	char *la_name;
-	char *la_event_channel;
-	char *chat_event_channel;
-	char *mod_event_channel;
-	char *info_event_channel;
-	char *desc;
-	char *timer_name;
-	char *tts_engine;
-	char *tts_voice;
-	char *member_enter_sound;
-	char *enter_sound;
-	char *exit_sound;
-	char *alone_sound;
-	char *perpetual_sound;
-	char *moh_sound;
-	char *tmp_moh_sound;
-	char *muted_sound;
-	char *mute_detect_sound;
-	char *unmuted_sound;
-	char *deaf_sound;
-	char *undeaf_sound;
-	char *blind_sound;
-	char *unblind_sound;
-	char *locked_sound;
-	char *is_locked_sound;
-	char *is_unlocked_sound;
-	char *kicked_sound;
-	char *join_only_sound;
-	char *caller_id_name;
-	char *caller_id_number;
-	char *sound_prefix;
+	char *name; // 会议名称
+	char *la_name; // Live Array 名称，从 name 中去掉 @ 后缀得到，用于创建实时事件数组的频道名
+	char *la_event_channel; // 事件通道名，Live Array 状态变更通过此通道推送
+	char *chat_event_channel; // 聊天消息事件通道
+	char *mod_event_channel; // 主持人操作事件通道
+	char *info_event_channel; // 会议信息查询事件通道
+	char *desc; // 会议描述文字（可选）
+	char *timer_name; // 定时器源名称，如 "soft"，用于音频帧同步
+	char *tts_engine; // TTS 引擎名称，如 "flite"、"google"
+	char *tts_voice;  //TTS 语音名称
+	char *member_enter_sound; // 成员进入时播放给该成员听的音效
+	char *enter_sound; // 成员进入时播放给所有人听的音效
+	char *exit_sound; // 成员离开时播放给所有人听的音效
+	char *alone_sound; // 只有 1 个人在会议时周期播放的音效
+	char *perpetual_sound; // 无条件循环播放的背景音，无论有几个人都播
+	char *moh_sound; // Music-on-Hold，仅当只有 1 人或等待主持人时播放
+	char *tmp_moh_sound; // 临时 MOH 覆盖，优先级高于 moh_sound
+	char *muted_sound; // 成员被静音时播放
+	char *mute_detect_sound; //检测到成员静音时播放
+	char *unmuted_sound; // 成员取消静音时播放
+	char *deaf_sound; // 成员被设为"聋"（听不到）时播放
+	char *undeaf_sound; // 成员取消"聋"时播放
+	char *blind_sound; // 盲转时播放
+	char *unblind_sound; //取消盲转时播放
+	char *locked_sound; // 会议被锁定时播放
+	char *is_locked_sound; // 新成员加入已锁定的会议时播放
+	char *is_unlocked_sound; // 会议解锁时播放
+	char *kicked_sound; // 成员被踢出时播放
+	char *join_only_sound; // 只加入模式提示音，加入会议时播放给该成员听，告知其已进入但无法参与互动
+	char *caller_id_name; // 会议对外呼出时的 Caller ID 名称
+	char *caller_id_number; // 会议对外呼出时的 Caller ID 号码
+	char *sound_prefix; // 音效文件的根路径前缀，如 "/usr/share/freeswitch/sounds/en/us/callie/"
 	char *special_announce;
-	char *auto_record;
-	int auto_record_canvas;
-	char *record_filename;
-	char *outcall_templ;
-	char *video_layout_conf;
-	char *video_layout_name;
-	char *video_layout_group;
-	char *video_canvas_bgcolor;
-	char *video_canvas_bgimg;
-	char *video_border_color;
-	char *video_super_canvas_bgcolor;
-	char *video_letterbox_bgcolor;
-	char *video_mute_banner;
-	char *no_video_avatar;
-	switch_event_t *variables;
-	conference_video_mode_t conference_video_mode;
-	int video_quality;
-	int members_with_video;
-	int members_seeing_video;
-	int members_with_avatar;
-	uint32_t auto_kps_debounce;
-	switch_codec_settings_t video_codec_settings;
-	uint32_t canvas_width;
-	uint32_t canvas_height;
-	uint32_t terminate_on_silence;
-	uint32_t max_members;
-	uint32_t doc_version;
-	uint32_t video_border_size;
-	char *maxmember_sound;
-	uint32_t announce_count;
-	char *pin;
-	char *mpin;
-	char *pin_sound;
-	char *bad_pin_sound;
-	char *profile_name;
-	char *domain;
-	char *chat_id;
-	char *caller_controls;
-	char *moderator_controls;
-	switch_live_array_t *la;
-	conference_flag_t flags[CFLAG_MAX];
-	member_flag_t mflags[MFLAG_MAX];
-	switch_call_cause_t bridge_hangup_cause;
-	switch_mutex_t *flag_mutex;
-	switch_mutex_t *file_mutex;
-	uint32_t rate;
-	uint32_t interval;
-	uint32_t channels;
-	switch_mutex_t *mutex;
-	conference_member_t *members;
-	uint32_t floor_holder;
-	uint32_t video_floor_holder;
-	uint32_t last_video_floor_holder;
-	switch_mutex_t *member_mutex;
-	conference_file_node_t *fnode;
-	conference_file_node_t *async_fnode;
-	switch_memory_pool_t *pool;
-	switch_thread_rwlock_t *rwlock;
-	uint32_t count;
-	int32_t energy_level;
-	int32_t auto_energy_level;
-	int32_t max_energy_level;
-	uint32_t agc_level;
-	uint32_t agc_low_energy_level;
-	uint32_t agc_margin;
-	uint32_t agc_change_factor;
-	uint32_t agc_period_len;
-	int32_t max_energy_hit_trigger;
-	int32_t auto_energy_sec;
-	uint32_t burst_mute_count;
-	uint8_t min;
-	switch_speech_handle_t lsh;
-	switch_speech_handle_t *sh;
-	switch_byte_t *not_talking_buf;
-	uint32_t not_talking_buf_len;
-	int pin_retries;
-	int broadcast_chat_messages;
-	int comfort_noise_level;
-	int auto_recording;
-	char *recording_metadata;
-	int record_count;
-	uint32_t min_recording_participants;
-	int ivr_dtmf_timeout;
-	int ivr_input_timeout;
-	uint32_t eflags;
-	uint32_t verbose_events;
-	int end_count;
-	uint32_t count_ghosts;
+	char *auto_record; // 自动录音模板路径（如 "${record_base_dir}/${conference_name}.wav"）
+	int auto_record_canvas; // 自动录音使用的画布 ID（多画布时指定录哪个）
+	char *record_filename; // 当前录音文件名
+	char *outcall_templ; // 外呼模板
+	char *video_layout_conf; // 视频布局配置字符串
+	char *video_layout_name; // 当前使用的布局名称
+	char *video_layout_group; // 当前布局组名称（组内包含多个布局，按人数自动切换）
+	char *video_canvas_bgcolor; // 画布背景色（如 "#000000"）
+	char *video_canvas_bgimg; // 	画布背景图片路径
+	char *video_border_color; // 视频边框颜色
+	char *video_super_canvas_bgcolor; // 超级画布背景色
+	char *video_letterbox_bgcolor; // Letterbox 填充色（头像/视频不匹配层大小时的填充色）
+	char *video_mute_banner; // 视频静音横幅文字（如 "MUTED"）
+	char *no_video_avatar; // 无视频时的默认头像图片路径
+	switch_event_t *variables; // 会议级自定义变量字典（可通过 channel variable 读写）
+	conference_video_mode_t conference_video_mode; // 视频模式：CONF_VIDEO_MODE_PASSTHROUGH（透传）或 CONF_VIDEO_MODE_MUX（混频）
+	int video_quality; // 视频质量参数（影响编码码率）
+	int members_with_video; // 有视频的成员数（实时更新）
+	int members_seeing_video; // 正在观看视频的成员数
+	int members_with_avatar; // 有头像（无视频）的成员数
+	uint32_t auto_kps_debounce; // 自动码率降级的防抖时间（ms），默认 5000ms
+	switch_codec_settings_t video_codec_settings; // 视频编解码器设置（编码参数）
+	uint32_t canvas_width; //画布默认宽度
+	uint32_t canvas_height; // 画布默认高度
+	uint32_t terminate_on_silence; // 静音多少秒后自动结束会议
+	uint32_t max_members; // 最大允许成员数，0=无限制
+	uint32_t doc_version; // 文档/状态版本号（用于前端同步）
+	uint32_t video_border_size; // 视频边框大小（像素）
+	char *maxmember_sound; // 达到最大人数时播放的音效
+	uint32_t announce_count; // 达到多少人时播报人数
+	char *pin; // 普通成员的 PIN 码
+	char *mpin; // 管理员的 PIN 码
+	char *pin_sound; // 提示输入 PIN 的音效
+	char *bad_pin_sound; // PIN 输入错误的音效
+	char *profile_name; // 所使用的会议配置 profile 名称（如 "default"、"wideband"）
+	char *domain; // 会议所属的 SIP 域名
+	char *chat_id; // 	聊天 ID
+	char *caller_controls; // 普通成员的 DTMF 控制映射表名称
+	char *moderator_controls;// 主持人的 DTMF 控制映射表名称
+	switch_live_array_t *la; // Live Array 对象，实时跟踪成员状态并推送给前端客户端
+	conference_flag_t flags[CFLAG_MAX]; // 会议级标志位数组，控制全局行为（如 CFLAG_DESTRUCT、CFLAG_VIDEO_MUXING、CFLAG_MINIMIZE_VIDEO_ENCODING、CFLAG_PERSONAL_CANVAS 等）
+	member_flag_t mflags[MFLAG_MAX]; // 默认成员标志位——新成员加入时继承这些标志
+	switch_call_cause_t bridge_hangup_cause; // 桥接挂断原因码
+	switch_mutex_t *flag_mutex; // 保护标志位操作的互斥锁
+	switch_mutex_t *file_mutex; // 保护文件节点的互斥锁
+	uint32_t rate; // 音频采样率
+	uint32_t interval; //每帧音频的时长（ms），通常 20ms。决定了音频混音循环的节拍
+	uint32_t channels; // 声道数，1=单声道，2=立体声
+	switch_mutex_t *mutex; // 会议主互斥锁
+	conference_member_t *members; // 成员链表头指针，所有成员以单链表串联
+	uint32_t floor_holder; // 当前音频发言权持有者的成员 ID
+	uint32_t video_floor_holder; // 当前视频发言权持有者的成员 ID（占据主画面位置）
+	uint32_t last_video_floor_holder; // 上一个视频发言权持有者的 ID
+	switch_mutex_t *member_mutex; // 保护 members 链表的互斥锁
+	conference_file_node_t *fnode; //同步文件播放节点（当前正在播放的同步音频/视频文件）
+	conference_file_node_t *async_fnode; // 异步文件播放节点（异步播放，不阻塞主循环）
+	switch_memory_pool_t *pool; // 会议的内存池（APR pool），所有会议内存从中分配，销毁时统一释放
+	switch_thread_rwlock_t *rwlock; // 读写锁，保护会议不被意外销毁
+	uint32_t count; // 当前成员总数
+	int32_t energy_level; // 	语音检测阈值。成员音频能量超过此值才被认为"在说话"
+	int32_t auto_energy_level; // 自动模式下的能量阈值
+	int32_t max_energy_level; // 能量上限（防爆音）
+	uint32_t agc_level; // AGC 目标音量级别
+	uint32_t agc_low_energy_level; // AGC 低能量阈值（低于此值才增益）
+	uint32_t agc_margin; // AGC 调整裕度
+	uint32_t agc_change_factor; // AGC 每次调整的幅度因子
+	uint32_t agc_period_len; // AGC 调整周期的帧数
+	int32_t max_energy_hit_trigger; // 能量超过最大值多少次后触发处理
+	int32_t auto_energy_sec; // 	自动能量检测的秒数窗口
+	uint32_t burst_mute_count; // 突发音量导致的静音计数
+	uint8_t min; // 最小编解码器间隔（ms），用于编解码协商
+	switch_speech_handle_t lsh; // 内嵌的 speech handle（局部使用）
+	switch_speech_handle_t *sh; // 指向当前使用的 speech handle
+	switch_byte_t *not_talking_buf; // "静音"帧缓冲区——所有成员都没人说话时输出的音频数据
+	uint32_t not_talking_buf_len; // "静音"帧缓冲区长度
+	int pin_retries; // PIN 输入最大重试次数
+	int broadcast_chat_messages; // 是否广播聊天消息
+	int comfort_noise_level; // 舒适噪声级别（静音时填充的低级别噪声，避免完全无声的"死寂"感）
+	int auto_recording; // 自动录音是否已启动标志
+	char *recording_metadata; // 录音元数据
+	int record_count; // 录音计数
+	uint32_t min_recording_participants; // 最少录音参与者人数（少于此数不录）
+	int ivr_dtmf_timeout; // IVR DTMF 输入超时（ms）
+	int ivr_input_timeout; // IVR 总输入超时（ms）
+	uint32_t eflags; // 	启用的事件类型位掩码
+	uint32_t verbose_events; // 是否发送详细事件
+	int end_count; // 具有 endconf 权限的成员计数
+	uint32_t count_ghosts; // 	"幽灵"成员数（半连接/残留状态的成员）
 	/* allow extra time after 'endconf' member leaves */
-	switch_time_t endconference_time;
-	int endconference_grace_time;
+	switch_time_t endconference_time; // 	endconf 成员离开后的宽限起始时间
+	int endconference_grace_time; // 宽限时间（秒），最后一个 endconf 成员离开后等待多久再结束会议
 
-	uint32_t relationship_total;
-	uint32_t score;
-	int mux_loop_count;
-	int member_loop_count;
-	switch_time_t run_time;
-	char *uuid_str;
-	uint32_t originating;
-	switch_call_cause_t cancel_cause;
-	conference_cdr_node_t *cdr_nodes;
-	conference_cdr_reject_t *cdr_rejected;
-	switch_time_t start_time;
-	switch_time_t end_time;
-	char *log_dir;
-	cdr_event_mode_t cdr_event_mode;
-	struct vid_helper vh[2];
-	struct vid_helper mh;
-	conference_record_t *rec_node_head;
-	int last_speech_channels;
-	mcu_canvas_t *canvases[MAX_CANVASES+1];
-	uint32_t canvas_count;
-	int super_canvas_label_layers;
-	int super_canvas_show_all_layers;
-	int canvas_running_count;
-	switch_mutex_t *canvas_mutex;
-	switch_hash_t *layout_hash;
-	switch_hash_t *layout_group_hash;
-	switch_fps_t video_fps;
-	int recording_members;
-	uint32_t video_floor_packets;
-	video_layout_t *new_personal_vlayout;
-	int max_bw_in;
-	int force_bw_in;
+	uint32_t relationship_total; // 	成员间自定义关系（如A静音B）的总数
+	uint32_t score; // 会议级别的原始能量分数（当前未广泛使用）
+	int mux_loop_count; // 混音循环计数（当前主要作为诊断/调试用）
+	int member_loop_count; // 每个混音周期处理的成员数
+	switch_time_t run_time; // 会议运行时长
+	char *uuid_str; // 创建该会议的原始呼叫 UUID
+	uint32_t originating; // 正在发起的外呼数量
+	switch_call_cause_t cancel_cause; // 取消原因码
+	conference_cdr_node_t *cdr_nodes; // CDR（呼叫详情记录）节点链表
+	conference_cdr_reject_t *cdr_rejected; // 被拒绝的加入记录
+	switch_time_t start_time; // 会议创建时间
+	switch_time_t end_time; // 会议结束时间
+	char *log_dir; // CDR 日志目录
+	cdr_event_mode_t cdr_event_mode; // CDR 事件模式 （CDRE_NONE=不生成事件, CDRE_AS_CONTENT=事件内容包含 CDR 数据, CDRE_AS_FILE=事件包含 CDR 文件路径）
+	struct vid_helper vh[2]; // 视频线程辅助数组（2个），用于跟踪视频线程状态并实现优雅关闭
+	struct vid_helper mh; // 成员级视频辅助（当前未使用，为预留字段）
+	conference_record_t *rec_node_head; // 录音节点链表头（支持多个并发录音）
+	int last_speech_channels; // 上一次 TTS 输出的声道数。声道配置变化时需要重新打开 speech handle
+	mcu_canvas_t *canvases[MAX_CANVASES+1]; // 画布数组，每个画布是一个独立的视频混频单元
+	uint32_t canvas_count; // 当前画布数量
+	int super_canvas_label_layers; // 是否在超级画布的各层上显示"Canvas N"标签
+	int super_canvas_show_all_layers; // 是否在超级画布上显示所有子画布（包括空闲的）
+	int canvas_running_count; // 正在运行的画布线程数
+	switch_mutex_t *canvas_mutex; // 保护画布操作的互斥锁
+	switch_hash_t *layout_hash; // 布局名称→布局定义的哈希表
+	switch_hash_t *layout_group_hash;// 布局组名称→布局组的哈希表
+	switch_fps_t video_fps; // 视频帧率配置（包含 fps、ms、samples）
+	int recording_members; // 正在录制视频的成员数
+	uint32_t video_floor_packets; // 视频发言权转移所需的最小连续数据包数（防闪切）
+	video_layout_t *new_personal_vlayout; // 待应用的新个人画布布局（个人画布模式下使用）
+	int max_bw_in; // 最大入站视频带宽（kbps）
+	int force_bw_in; // 强制入站视频带宽（0=不强制）
 
 	/* special use case, scalling shared h264 canvas*/
-	int scale_h264_canvas_width;
-	int scale_h264_canvas_height;
-	int scale_h264_canvas_fps_divisor;
-	char *scale_h264_canvas_bandwidth;
-	uint32_t moh_wait;
-	uint32_t floor_holder_score_iir;
-	char *default_layout_name;
-	int mux_paused;
-	char *video_codec_config_profile_name;
-	int heartbeat_period_sec;
+	int scale_h264_canvas_width; // H264 专用缩放目标宽度（降低编码分辨率以节省带宽）
+	int scale_h264_canvas_height; // 	H264 专用缩放目标高度
+	int scale_h264_canvas_fps_divisor; // H264 帧率除数（如 2=降为原来一半帧率）
+	char *scale_h264_canvas_bandwidth; // H264 缩放后的目标带宽（字符串，如 "auto" 或 "512k"）
+	uint32_t moh_wait; // MOH 重试冷却计数器（以音频帧数为单位）。MOH 播放失败时设为 2000/interval（约2秒），倒计到 0 才允许再次尝试
+	uint32_t floor_holder_score_iir; // 当前发言权持有者的 IIR 平滑能量值
+	char *default_layout_name; // 默认布局名称（重置时恢复用）
+	int mux_paused; // 混频暂停标志（如两人桥接模式时不做混频）
+	char *video_codec_config_profile_name; // 视频编码配置 profile 名称
+	int heartbeat_period_sec; // 心跳周期（秒），定期发送会议状态事件
 } conference_obj_t;
 
 /* Relationship with another member */
@@ -827,145 +829,185 @@ typedef struct conference_relationship {
 	struct conference_relationship *next;
 } conference_relationship_t;
 
+/***
+ *conference_member_t (一个参会者)
+    │
+    ├── session → switch_core_session (SIP 呼叫会话)
+    │     └── channel → switch_channel (通道，读写变量/标志)
+    │
+    ├── 音频路径 ──────────────────────────────────────────┐
+    │   RTP → audio_buffer → [read_resampler] → frame     │
+    │         (audio_in_mutex 保护)                         │
+    │                                                       │
+    │   mux_buffer → 编码 → RTP 发送                        │
+    │   (audio_out_mutex 保护)                              │
+    │                                                       │
+    │   能量: frame → score → score_iir → gate_open        │
+    │         码率管理: managed_kps ──请求──→ 对端           │
+    └──────────────────────────────────────────────────────┘
+    │
+    ├── 视频路径 ──────────────────────────────────────────┐
+    │   RTP → video_queue → pop_next_image() → img         │
+    │                                                       │
+    │   video_layer_id → canvas->layers[id] (层位置)       │
+    │     └── img → scale_and_patch → canvas->img (合成)    │
+    │                                                       │
+    │   帧质量: good_img / blanks / blackouts               │
+    │   视频: flip (旋转), video_filters (滤镜)             │
+    │   摄像头: cam_opts (自动变焦/平移)                    │
+    │                                                       │
+    │   fb (帧缓冲区) → video_muxing_write_thread → RTP    │
+    └──────────────────────────────────────────────────────┘
+    │
+    ├── relationships → [rel1(id=3,flags=静音)] → [rel2] → NULL
+    │
+    ├── fnode → 成员级音频文件播放
+    │
+    └── al → 空间音频处理
+
+ *
+ *
+ */
+
 /* Conference Member Object */
 struct conference_member {
-	uint32_t id;
-	switch_core_session_t *session;
-	switch_channel_t *channel;
-	conference_obj_t *conference;
-	switch_memory_pool_t *pool;
-	switch_buffer_t *audio_buffer;
-	switch_buffer_t *mux_buffer;
-	switch_buffer_t *resample_buffer;
-	member_flag_t flags[MFLAG_MAX];
-	int32_t score;
-	int32_t last_score;
-	uint32_t score_iir;
-	switch_mutex_t *flag_mutex;
-	switch_mutex_t *write_mutex;
-	switch_mutex_t *audio_in_mutex;
-	switch_mutex_t *audio_out_mutex;
-	switch_mutex_t *read_mutex;
-	switch_mutex_t *fnode_mutex;
-	switch_thread_rwlock_t *rwlock;
-	switch_codec_implementation_t read_impl;
-	switch_codec_implementation_t orig_read_impl;
-	switch_codec_t read_codec;
-	switch_codec_t write_codec;
-	char *rec_path;
-	switch_time_t rec_time;
-	conference_record_t *rec;
+	uint32_t id; //成员唯一 ID（在会议内递增分配），是所有成员操作（踢人、静音等）的索引
+	switch_core_session_t *session; // FreeSWITCH 会话对象，代表该成员的 SIP 呼叫。为 NULL 时表示"幽灵"成员（录音节点等）
+	switch_channel_t *channel; // 会话的通道对象，用于读写通道变量和状态标志
+	conference_obj_t *conference; // 	反向指向所属会议对象
+	switch_memory_pool_t *pool; // 成员专属内存池，成员退出时统一释放
+	switch_buffer_t *audio_buffer; // 输入音频缓冲区。从 RTP 读取的音频帧暂存在此，等待混音线程消费
+	switch_buffer_t *mux_buffer;  // 输出混音缓冲区。混音完成后，该成员应该听到的混合音频写入此缓冲区
+	switch_buffer_t *resample_buffer; // 重采样中间缓冲区。当成员采样率与会议不同时，重采样过程中的中间数据
+	member_flag_t flags[MFLAG_MAX]; // 成员标志位数组。关键标志包括：MFLAG_CAN_SPEAK（能说话）、MFLAG_CAN_BE_SEEN（视频可见）、MFLAG_CAN_HEAR（能听到）、MFLAG_HOLD（保持）、MFLAG_RUNNING（线程运行中）等
+	int32_t score; // 当前帧的音频能量值（所有采样绝对值之和 / 采样数）。每帧实时计算
+	int32_t last_score; // 上一帧的能量值，用于计算差值
+	uint32_t score_iir; // IIR 平滑后的能量值。公式：(1-DECAY)*score + DECAY*score_iir，防止瞬时波动
+	switch_mutex_t *flag_mutex; // 保护标志位的互斥锁
+	switch_mutex_t *write_mutex; // 保护写操作
+	switch_mutex_t *audio_in_mutex; // 保护 audio_buffer（输入端写入，混音线程读取）
+	switch_mutex_t *audio_out_mutex; // 保护 mux_buffer（混音线程写入，输出端读取）
+	switch_mutex_t *read_mutex; // 保护读操作
+	switch_mutex_t *fnode_mutex; // 保护成员级文件播放节点
+	switch_thread_rwlock_t *rwlock; // 读写锁，其他线程引用该成员时加读锁，防止成员被销毁
+	switch_codec_implementation_t read_impl; // 当前读编解码器的实现参数（采样率、打包间隔等）
+	switch_codec_implementation_t orig_read_impl; // 原始读编解码器参数（保存初始值，用于恢复）
+	switch_codec_t read_codec; // 读编解码器实例
+	switch_codec_t write_codec; // 	写编解码器实例
+	char *rec_path; // 录像文件路径
+	switch_time_t rec_time; // 录像开始时间
+	conference_record_t *rec; // 录像节点对象
 	/**add new member record */
 	char * member_record_path; //成员单独录像路径
 	switch_bool_t member_record; // 成员单独录像开关
 	/**-------- */
-	uint8_t *frame;
-	uint8_t *last_frame;
-	uint32_t frame_size;
-	uint8_t *mux_frame;
-	uint32_t read;
-	uint32_t vol_period;
-	int32_t energy_level;
-	int32_t auto_energy_level;
-	int32_t max_energy_level;
-	int32_t agc_level;
-	uint32_t agc_low_energy_level;
-	uint32_t agc_margin;
-	uint32_t agc_change_factor;
-	uint32_t agc_period_len;
-	switch_agc_t *agc;
-	uint32_t mute_counter;
-	uint32_t burst_mute_count;
-	uint32_t score_avg;
-	uint32_t max_energy_hits;
-	uint32_t max_energy_hit_trigger;
-	int32_t volume_in_level;
-	int32_t volume_out_level;
-	switch_time_t join_time;
-	time_t last_talking;
-	switch_time_t first_talk_detect;
-	uint32_t talk_detects;
-	uint32_t auto_energy_track;
-	uint32_t talk_track;
-	uint32_t score_count;
-	uint32_t score_accum;
-	uint32_t score_delta_accum;
-	uint32_t native_rate;
-	uint32_t gate_open;
-	uint32_t gate_count;
-	uint32_t nogate_count;
-	uint32_t talking_count;
-	switch_audio_resampler_t *read_resampler;
-	int16_t *resample_out;
-	uint32_t resample_out_len;
-	conference_file_node_t *fnode;
-	conference_relationship_t *relationships;
-	switch_speech_handle_t lsh;
-	switch_speech_handle_t *sh;
-	uint32_t verbose_events;
-	struct conference_member *next;
-	switch_ivr_dmachine_t *dmachine;
-	conference_cdr_node_t *cdr_node;
-	char *kicked_sound;
-	switch_queue_t *dtmf_queue;
-	switch_queue_t *video_queue;
-	switch_thread_t *video_muxing_write_thread;
-	switch_thread_t *video_layer_thread;
-	int layer_thread_running;
-	switch_thread_t *input_thread;
-	switch_thread_cond_t *layer_cond;
-	switch_mutex_t *layer_cond_mutex;
-	cJSON *json;
-	cJSON *status_field;
-	uint8_t loop_loop;
-	al_handle_t *al;
-	int last_speech_channels;
-	int video_layer_id;
-	int canvas_id;
-	int watching_canvas_id;
-	int layer_timeout;
-	int video_codec_index;
-	int video_codec_id;
-	char *video_banner_text;
-	switch_image_t *video_logo;
-	switch_img_position_t logo_pos;
-	switch_img_fit_t logo_fit;
-	char *video_mute_png;
-	char *video_reservation_id;
-	char *video_role_id;
-	char *video_codec_group;
-	switch_vid_params_t vid_params;
-	uint32_t auto_kps_debounce_ticks;
-	uint32_t layer_loops;
-	switch_frame_buffer_t *fb;
-	switch_image_t *avatar_png_img;
-	switch_image_t *video_mute_img;
+	uint8_t *frame; // 原始音频帧缓冲区（从 audio_buffer 读取的一帧数据），frame_size 字节
+	uint8_t *last_frame; //上一帧音频（用于计算能量差值 score_delta_accum，当前代码中未广泛使用）
+	uint32_t frame_size; // frame 缓冲区的大小（字节）
+	uint8_t *mux_frame; // 	混合输出帧缓冲区（备用/遗留字段）
+	uint32_t read; // 当前读取的字节数
+	uint32_t vol_period; // 音量调整后的冷却帧数。调整音量后跳过若干帧再恢复正常检测
+	int32_t energy_level; // 语音检测阈值。score > energy_level 时认为在说话
+	int32_t auto_energy_level; // 自动调整模式下的能量阈值
+	int32_t max_energy_level; // 能量上限（防爆音）
+	int32_t agc_level; // AGC 目标音量级别
+	uint32_t agc_low_energy_level; // 	AGC 低能量阈值
+	uint32_t agc_margin; // AGC 调整裕度
+	uint32_t agc_change_factor; // 每次增益调整的幅度因子
+	uint32_t agc_period_len; // 	AGC 调整周期（帧数）
+	switch_agc_t *agc; // FreeSWITCH 内置 AGC 算法状态
+	uint32_t mute_counter; // 连续低能量帧计数
+	uint32_t burst_mute_count; // 突发音量触发静音的计数
+	uint32_t score_avg; // 本次说话期间的平均能量（score_accum / score_count）
+	uint32_t max_energy_hits; // 连续超过最大能量的帧数
+	uint32_t max_energy_hit_trigger; // 超过最大能量多少帧后触发处理
+	int32_t volume_in_level; // 输入音量增益（从成员收取的音频放大/缩小）
+	int32_t volume_out_level; // 输出音量增益（发给成员的音频放大/缩小）
+	switch_time_t join_time; // 加入会议的时间戳
+	time_t last_talking; // 上一次停止说话的时间
+	switch_time_t first_talk_detect; // 第一次检测到说话的时间戳
+	uint32_t talk_detects; // 检测到的说话次数（每次从静音→说话算一次）
+	uint32_t auto_energy_track; // 非说话期间的帧计数。超过 auto_energy_sec 秒后自动降低 energy_level（自适应阈值）
+	uint32_t talk_track; // 帧计数器，累积到约 10 秒时触发一次 talk-data 事件，报告说话统计
+	uint32_t score_count; // 说话期间的帧计数
+	uint32_t score_accum; // 说话期间的能量累计总和
+	uint32_t score_delta_accum; // 说话期间的能量差值累计（abs(score - last_score)），衡量声音稳定性
+	uint32_t native_rate; // 成员的原生音频采样率
+	uint32_t gate_open; // 当前帧噪声门状态：1=能量超过阈值（在说话），0=低于阈值（静音）
+	uint32_t gate_count; // 本次说话期间通过噪声门的帧数（能量超标的帧）
+	uint32_t nogate_count; // 本次说话期间未通过噪声门的帧数（能量不足但仍处于说话状态，因为有余晖机制）
+	uint32_t talking_count; // 说话次数累计
+	switch_audio_resampler_t *read_resampler; // 音频重采样器。将成员音频从其原生采样率转换到会议统一采样率
+	int16_t *resample_out; // 重采样输出缓冲区
+	uint32_t resample_out_len; // 重采样输出缓冲区长度
+	conference_file_node_t *fnode; // 成员级文件播放节点（仅对该成员播放的音频/视频文件）
+	conference_relationship_t *relationships; // 与其他成员的关系链表。如"A 静音 B"、"A 听不到 C"
+	switch_speech_handle_t lsh; // 内嵌 TTS 句柄
+	switch_speech_handle_t *sh; // 指向当前 TTS 句柄
+	uint32_t verbose_events; // 是否为该成员发送详细事件
+	struct conference_member *next; // 链表后向指针，串联到下一个成员
+	switch_ivr_dmachine_t *dmachine; // DTMF 状态机（检测拨号方案匹配）
+	conference_cdr_node_t *cdr_node; // 该成员的 CDR（呼叫详情记录）节点
+	char *kicked_sound; // 该成员被踢出时播放的音效
+	switch_queue_t *dtmf_queue; // DTMF 事件队列
+	switch_queue_t *video_queue; //视频帧输入队列（从 RTP 收到的视频帧暂存）
+	switch_thread_t *video_muxing_write_thread; // 视频写入线程（将编码后的帧写入 RTP）
+	switch_thread_t *video_layer_thread; // 层处理线程（多核时并行做缩放贴图）
+	int layer_thread_running; // 	层处理线程是否运行中
+	switch_thread_t *input_thread; // 视频输入线程
+	switch_thread_cond_t *layer_cond; // 层线程的条件变量（唤醒层线程处理新帧）
+	switch_mutex_t *layer_cond_mutex; // 保护条件变量的互斥锁
+	cJSON *json; //成员状态的 JSON 表示（用于 Live Array 推送）
+	cJSON *status_field; // 状态字段的 JSON 对象
+	uint8_t loop_loop; // 成员音频循环的退出标志。设为 1 时循环线程退出
+	al_handle_t *al; // 空间音频处理句柄。启用时，成员的音频会根据其"位置"进行空间化处理（模拟 3D 声场）
+	int last_speech_channels; // 上次 TTS 输出的声道数。声道数变化时需重新打开 speech handle
+	int video_layer_id; // 当前分配的视频层 ID（-1=未分配）。层是画布上的一个视频窗口位置
+	int canvas_id; // 当前分配到的画布 ID（-1=未分配）
+	int watching_canvas_id; // 	正在观看的画布 ID。决定成员看到哪个画布的合成画面
+	int layer_timeout; // 层分配超时计数器。连续多帧无法分配到层时尝试切换画布
+	int video_codec_index; // 	在画布 write_codecs[] 数组中的索引（minimize encoding 分组）
+	int video_codec_id; // 成员使用的编解码器 ID
+	char *video_banner_text; // 视频横幅文字（如成员名称，显示在视频层上）
+	switch_image_t *video_logo; // 成员的视频 Logo 叠加图
+	switch_img_position_t logo_pos;  // Logo 位置（左上/右下等）
+	switch_img_fit_t logo_fit; //	Logo 缩放模式
+	char *video_mute_png; // 视频静音图片文件路径
+	char *video_reservation_id; // 视频层预留 ID（通过 vid-reservation-id 保留特定层位置）
+	char *video_role_id; // 视频角色 ID（如 "presenter"、"audience"，绑定到有对应 role_id 的层）
+	char *video_codec_group; // 编解码器分组名称。同组内的成员共享编码输出
+	switch_vid_params_t vid_params; // 视频参数（分辨率、帧率等）
+	uint32_t auto_kps_debounce_ticks; // 码率降级的防抖倒计时（帧数）。倒计到 0 才真正降低码率
+	uint32_t layer_loops; // 层循环计数，用于自动码率检测
+	switch_frame_buffer_t *fb; // 帧缓冲区，视频写入线程从中取帧编码发送
+	switch_image_t *avatar_png_img; // 成员的头像图片（无视频时显示）
+	switch_image_t *video_mute_img; // 视频静音时的冻结帧截图
 	uint32_t floor_packets;
-	int blanks;
-	int managed_kps;
-	int managed_kps_set;
-	int blackouts;
-	int good_img;
-	int auto_avatar;
-	int avatar_patched;
-	switch_media_flow_t video_media_flow;
-	mcu_canvas_t *canvas;
-	switch_image_t *pcanvas_img;
-	int max_bw_in;
-	int force_bw_in;
-	int max_bw_out;
-	int reset_media;
-	int flip;
-	int flip_count;
+	int blanks; // 连续空帧计数。达到 fps 时请求视频刷新（I 帧请求）
+	int managed_kps; // 当前请求的入站视频码率（kbps）
+	int managed_kps_set; // 已确认发送给对端的码率。避免重复发送相同码率请求
+	int blackouts; // 严重黑屏事件计数。达到 fps*5 时显示头像并清除码率管理
+	int good_img; // 	连续有效（非空）视频帧计数。每 fps*10 帧重置比特率计数器
+	int auto_avatar; // 自动头像检测标志
+	int avatar_patched; // 头像已贴到层的标志（避免重复操作）
+	switch_media_flow_t video_media_flow; // 视频媒体流方向（SENDRECV、SENDONLY、RECVONLY、INACTIVE）
+	mcu_canvas_t *canvas; // 个人画布指针（Personal Canvas 模式下使用）
+	switch_image_t *pcanvas_img; // 个人画布模式下，从该成员获取的视频帧
+	int max_bw_in; // 该成员的最大入站带宽限制
+	int force_bw_in; // 强制入站带宽
+	int max_bw_out; // 	该成员的最大出站带宽限制
+	int reset_media; //媒体重置倒计时（帧数）。检测到 CF_CONFERENCE_RESET_MEDIA 时设为 10，倒计到 0 时调用 conference_member_setup_media() 重新初始化媒体
+	int flip; // 视频旋转角度（0/90/180/270 度）
+	int flip_count; // 自动旋转的帧计数器。达到 fps/2 时旋转 90 度
 
-	switch_mutex_t *text_mutex;
-	switch_buffer_t *text_buffer;
-	char *text_framedata;
-	uint32_t text_framesize;
+	switch_mutex_t *text_mutex; // 保护文本缓冲区
+	switch_buffer_t *text_buffer; // 文本数据缓冲区（累积 T.140 实时文本）
+	char *text_framedata; // 组装后的完整文本帧数据（初始 1024 字节，按需扩容)
+	uint32_t text_framesize; // text_framedata 的当前分配大小
 
-	mcu_layer_cam_opts_t cam_opts;
-	switch_core_video_filter_t video_filters;
-	int video_manual_border;
+	mcu_layer_cam_opts_t cam_opts; // 摄像头控制选项：自动变焦（autozoom）、自动平移（autopan）、变焦因子（zoom_factor）、平移速度等
+	switch_core_video_filter_t video_filters; // 视频滤镜位掩码（灰度 SCV_FILTER_GRAY_FG、复古 SCV_FILTER_SEPIA_FG、8位 SCV_FILTER_8BIT_FG 等）
+	int video_manual_border; // 手动视频边框大小
 
 };
 
