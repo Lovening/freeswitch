@@ -87,6 +87,19 @@ switch_status_t conference_file_close(conference_obj_t *conference, conference_f
 		switch_event_fire(&event);
 	}
 
+	/* 当rtsp 流结束播放的时候增加删除人员的事件 */
+	if (!zstr(node->file) && !switch_is_file_path(node->file)) {
+		switch_event_t *del_event;
+		if (switch_event_create_subclass(&del_event, SWITCH_EVENT_CUSTOM, CONF_EVENT_MAINT) == SWITCH_STATUS_SUCCESS) {
+			conference_event_add_data(conference, del_event); /* includes Conference-Size */
+			switch_event_add_header_string(del_event, SWITCH_STACK_BOTTOM, "Action", "del-member");
+			switch_event_add_header_string(del_event, SWITCH_STACK_BOTTOM, "Member-Type", "stream");
+			switch_event_add_header_string(del_event, SWITCH_STACK_BOTTOM, "Stream-URL", node->file);
+			switch_event_add_header_string(del_event, SWITCH_STACK_BOTTOM, "Async", node->async ? "true" : "false");
+			switch_event_fire(&del_event);
+		}
+	}
+
 #ifdef OPENAL_POSITIONING
 	if (node->al && node->al->device) {
 		conference_al_close(node->al);
@@ -282,6 +295,33 @@ switch_status_t conference_file_play(conference_obj_t *conference, char *file, u
 		switch_core_destroy_memory_pool(&pool);
 		status = SWITCH_STATUS_NOTFOUND;
 		goto done;
+	}
+
+	/* 成功播放网络流的时候添加事件— only for network streams (rtsp/rtp/http/vlc/mms) */
+	if (!switch_is_file_path(file)) {
+		switch_event_t *event;
+
+		if (test_eflag(conference, EFLAG_PLAY_FILE) &&
+			switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CONF_EVENT_MAINT) == SWITCH_STATUS_SUCCESS) {
+			conference_event_add_data(conference, event);
+			if (fnode->fh.params) {
+				switch_event_merge(event, fnode->fh.params);
+			}
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Action", "play-file");
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "File", file);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Async", async ? "true" : "false");
+			switch_event_fire(&event);
+		}
+
+		/* 发送add-member事件（Member-Type: stream），以便ESL成员计数监听器可以跟踪流加入 */
+		if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CONF_EVENT_MAINT) == SWITCH_STATUS_SUCCESS) {
+			conference_event_add_data(conference, event); /* includes Conference-Size */
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Action", "add-member");
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Member-Type", "stream");
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Stream-URL", file);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Async", async ? "true" : "false");
+			switch_event_fire(&event);
+		}
 	}
 
 	fnode->layer_lock = -1;
