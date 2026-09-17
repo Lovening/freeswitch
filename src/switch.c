@@ -529,7 +529,7 @@ int main(int argc, char *argv[])
 	switch_bool_t waste = SWITCH_FALSE;
 #endif
 #endif
-
+	// 把argv拷贝到local_argv中
 	for (x = 0; x < argc; x++) {
 		local_argv[x] = argv[x];
 	}
@@ -1039,7 +1039,7 @@ int main(int argc, char *argv[])
 	if (do_kill) {
 		return freeswitch_kill_background();
 	}
-
+	// 使用 fspr_initialize() 初始化 APR 库，如果失败则输出错误信息并退出
 	if (fspr_initialize() != SWITCH_STATUS_SUCCESS) {
 		fprintf(stderr, "FATAL ERROR! Could not initialize APR\n");
 		return 255;
@@ -1112,7 +1112,7 @@ int main(int argc, char *argv[])
 	if (switch_core_set_process_privileges() < 0) {
 		return 255;
 	}
-
+	//按优先级参数调度：-hp/-rp→实时、-np→普通、-lp→低、默认→自动
 	switch (priority) {
 	case 2:
 		set_realtime_priority();
@@ -1158,9 +1158,9 @@ int main(int argc, char *argv[])
 		exit(EXIT_SUCCESS);
 	}
 #endif
-
+	// 设置全局的变量
 	switch_core_set_globals();
-
+	// pid 文件管理
 	pid = getpid();
 
 	memset(pid_buffer, 0, sizeof(pid_buffer));
@@ -1186,7 +1186,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Cannot open pid file %s.\n", pid_path);
 		return 255;
 	}
-
+	// 独占锁 → 写入当前 PID
 	if (switch_file_lock(fd, SWITCH_FLOCK_EXCLUSIVE | SWITCH_FLOCK_NONBLOCK) != SWITCH_STATUS_SUCCESS) {
 		fprintf(stderr, "Cannot lock pid file %s.\n", pid_path);
 		old_pid_len = strlen(old_pid_buffer);

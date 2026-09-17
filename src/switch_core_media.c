@@ -303,13 +303,15 @@ switch_srtp_crypto_suite_t SUITES[CRYPTO_INVALID] = {
     {"AES_CM_128_NULL_AUTH", "", AES_CM_128_NULL_AUTH, 30, 14}};
 
 static switch_bool_t ice_resolve_candidate = 0;
-
+//设置全局 ICE candidate 解析开关
 SWITCH_DECLARE(void)
 switch_core_media_set_resolveice(switch_bool_t resolve_ice) { ice_resolve_candidate = resolve_ice; }
 
+//查询 ICE candidate 解析是否开启
 SWITCH_DECLARE(switch_bool_t)
 switch_core_media_has_resolveice(void) { return ice_resolve_candidate; }
 
+//将字符串（如 "AES_CM_128_HMAC_SHA1_80"）转为 SRTP 加密套件枚举
 SWITCH_DECLARE(switch_rtp_crypto_key_type_t)
 switch_core_media_crypto_str2type(const char* str) {
     int i;
@@ -324,19 +326,19 @@ switch_core_media_crypto_str2type(const char* str) {
 
     return CRYPTO_INVALID;
 }
-
+//将加密套件枚举转为字符串名称
 SWITCH_DECLARE(const char*)
 switch_core_media_crypto_type2str(switch_rtp_crypto_key_type_t type) {
     switch_assert(type < CRYPTO_INVALID);
     return SUITES[type].name;
 }
-
+//获取指定加密套件的 key+salt 总长度
 SWITCH_DECLARE(int)
 switch_core_media_crypto_keysalt_len(switch_rtp_crypto_key_type_t type) {
     switch_assert(type < CRYPTO_INVALID);
     return SUITES[type].keysalt_len;
 }
-
+//获取指定加密套件的 salt 长度
 SWITCH_DECLARE(int)
 switch_core_media_crypto_salt_len(switch_rtp_crypto_key_type_t type) {
     switch_assert(type < CRYPTO_INVALID);
@@ -346,7 +348,7 @@ switch_core_media_crypto_salt_len(switch_rtp_crypto_key_type_t type) {
 static const char* CRYPTO_KEY_PARAM_METHOD[CRYPTO_KEY_PARAM_METHOD_INVALID] = {
     [CRYPTO_KEY_PARAM_METHOD_INLINE] = "inline",
 };
-
+//将 sofia-sip 的 SDP 方向枚举（sdp_sendonly等）转为 FreeSWITCH 内部的 switch_media_flow_t
 static inline switch_media_flow_t sdp_media_flow(unsigned in) {
     switch (in) {
         case sdp_sendonly:
@@ -362,6 +364,7 @@ static inline switch_media_flow_t sdp_media_flow(unsigned in) {
     return SWITCH_MEDIA_FLOW_SENDRECV;
 }
 
+//获取编解码器通道数，特殊处理 Opus 固定返回 2（立体声）
 static int get_channels(const char* name, int dft) {
     if (!zstr(name) && !switch_true(switch_core_get_variable("NDLB_broken_opus_sdp")) &&
         !strcasecmp(name, "opus")) {
@@ -371,6 +374,7 @@ static int get_channels(const char* name, int dft) {
     return dft ? dft : 1;
 }
 
+//计算当前会话的视频帧率（基于 vid_frames 计数器 / 已运行时间）
 SWITCH_DECLARE(uint32_t)
 switch_core_media_get_video_fps(switch_core_session_t* session) {
     switch_media_handle_t* smh;
@@ -413,7 +417,7 @@ switch_core_media_get_video_fps(switch_core_session_t* session) {
 
     return fps;
 }
-
+//从 SDP 中提取 UDPTL（T.38传真）参数，包括最大传输速率、纠错模式、冗余包数等
 static switch_t38_options_t* switch_core_media_process_udptl(switch_core_session_t* session,
                                                              sdp_session_t* sdp, sdp_media_t* m) {
     switch_t38_options_t* t38_options = switch_channel_get_private(session->channel, "t38_options");
@@ -542,7 +546,7 @@ switch_core_media_get_vid_params(switch_core_session_t* session, switch_vid_para
 
     return SWITCH_STATUS_SUCCESS;
 }
-
+//从远端 SDP 字符串中解析出完整的 T.38 选项结构体
 SWITCH_DECLARE(switch_t38_options_t*)
 switch_core_media_extract_t38_options(switch_core_session_t* session, const char* r_sdp) {
     sdp_media_t* m;
@@ -571,7 +575,7 @@ switch_core_media_extract_t38_options(switch_core_session_t* session, const char
     return t38_options;
 }
 
-//?
+//? 重置会话的 T.38 状态
 SWITCH_DECLARE(switch_status_t)
 switch_core_media_process_t38_passthru(switch_core_session_t* session,
                                        switch_core_session_t* other_session,
@@ -631,7 +635,7 @@ switch_core_media_process_t38_passthru(switch_core_session_t* session,
 
     return SWITCH_STATUS_SUCCESS;
 }
-
+//根据编解码器名称查找匹配的 RTP payload type 编号
 SWITCH_DECLARE(switch_status_t)
 switch_core_session_get_payload_code(switch_core_session_t* session, switch_media_type_t type,
                                      const char* iananame, uint32_t rate, const char* fmtp_in,
@@ -689,7 +693,12 @@ switch_core_session_get_payload_code(switch_core_session_t* session, switch_medi
 
     return SWITCH_STATUS_FALSE;
 }
-
+// 核心函数：将远端 SDP 中的编解码器信息注册到会话的 payload_map 链表中，包括编解码器名、采样率、pt、ptime、通道数等
+//是 SDP 协商中最重要的函数之一。 它将远端 SDP m= 行中的每个编解码器映射为 FreeSWITCH 内部的 payload_map_t 结构。这个映射过程需要处理：
+// 静态 PT（如 PCMU=0, PCMA=8）与 动态 PT（如 96-127 用于 Opus/VP8 等）
+// 同一编解码器的多种 fmtp 参数（如 H264 的 profile-level-id、packetization-mode）
+// 编解码器去重和优先级排序
+// switch_core_media_set_codec() 在设置编解码器时会做"能力匹配"——如果双方 ptime 不一致，FreeSWITCH 可能需要启用转码。
 SWITCH_DECLARE(payload_map_t*)
 switch_core_media_add_payload_map(switch_core_session_t* session, switch_media_type_t type,
                                   const char* name, const char* modname, const char* fmtp,
@@ -836,7 +845,7 @@ switch_core_media_add_payload_map(switch_core_session_t* session, switch_media_t
 
     return pmap;
 }
-
+// 获取当前会话的编解码器字符串（用于 SDP 生成）
 SWITCH_DECLARE(const char*)
 switch_core_media_get_codec_string(switch_core_session_t* session) {
     const char *preferred = NULL, *fallback = NULL;
@@ -865,7 +874,7 @@ switch_core_media_get_codec_string(switch_core_session_t* session) {
 
     return !zstr(preferred) ? preferred : fallback;
 }
-
+// 	清除会话的所有 SRTP 加密状态
 SWITCH_DECLARE(void)
 switch_core_session_clear_crypto(switch_core_session_t* session) {
     int i;
@@ -902,7 +911,7 @@ switch_core_session_clear_crypto(switch_core_session_t* session) {
                sizeof(smh->engines[SWITCH_MEDIA_TYPE_TEXT].ssec[i]));
     }
 }
-
+//	生成本地 SRTP crypto 属性行的字符串（如 inline:...）
 SWITCH_DECLARE(const char*)
 switch_core_session_local_crypto_key(switch_core_session_t* session, switch_media_type_t type) {
     if (!session->media_handle) {
@@ -913,7 +922,7 @@ switch_core_session_local_crypto_key(switch_core_session_t* session, switch_medi
         .ssec[session->media_handle->engines[type].crypto_type]
         .local_crypto_key;
 }
-
+// 解析 RTP bug 标志字符串（处理各种设备 RTP 实现不兼容问题）
 SWITCH_DECLARE(void)
 switch_core_media_parse_rtp_bugs(switch_rtp_bug_flag_t* flag_pole, const char* str) {
     if (switch_stristr("clear", str)) {
@@ -1028,6 +1037,7 @@ switch_core_media_parse_rtp_bugs(switch_rtp_bug_flag_t* flag_pole, const char* s
 /**
  * If @use_alias != 0 then send crypto with alias name instead of name.
  */
+//构建 SRTP 加密密钥材料
 static switch_status_t switch_core_media_build_crypto(switch_media_handle_t* smh,
                                                       switch_media_type_t type, int index,
                                                       switch_rtp_crypto_key_type_t ctype,
@@ -1131,6 +1141,7 @@ static switch_status_t switch_core_media_build_crypto(switch_media_handle_t* smh
  *				if a is LIFETIME then YYYYYYYY is decimal Base, ZZZZZZZZ is decimal
  * Exponent if a is MKI, then YYYYYYYY is decimal MKI_ID, ZZZZZZZZ is decimal MKI_SIZE
  */
+// 解析 crypto 属性中的 lifetime 和 MKI 参数
 static uint32_t parse_lifetime_mki(const char** p, const char* end) {
     const char* field_begin;
     const char* field_end;
@@ -1197,7 +1208,7 @@ static uint32_t parse_lifetime_mki(const char** p, const char* end) {
 
     return res;
 }
-
+// 将密钥材料追加到候选列表
 static switch_crypto_key_material_t* switch_core_media_crypto_append_key_material(
     switch_core_session_t* session, switch_crypto_key_material_t* tail,
     switch_rtp_crypto_key_param_method_type_t method,
@@ -2279,7 +2290,7 @@ switch_core_media_get_mparams(switch_media_handle_t* smh) {
     switch_assert(smh);
     return smh->mparams;
 }
-
+// 核心函数：初始化会话的编解码器列表，解析 inbound/outbound codec string，按优先级排序并加载编解码器模块
 SWITCH_DECLARE(switch_status_t)
 switch_core_media_prepare_codecs(switch_core_session_t* session, switch_bool_t force) {
     const char *abs, *codec_string = NULL;
@@ -3481,7 +3492,7 @@ switch_core_media_write_frame(switch_core_session_t* session, switch_frame_t* fr
     return status;
 }
 
-//?
+//? 深拷贝 T.38 选项
 SWITCH_DECLARE(void)
 switch_core_media_copy_t38_options(switch_t38_options_t* t38_options,
                                    switch_core_session_t* session) {
@@ -3511,7 +3522,7 @@ switch_core_media_copy_t38_options(switch_t38_options_t* t38_options,
     switch_channel_set_private(channel, "t38_options", local_t38_options);
 }
 
-//?
+//? 获取远端 SDP 中提议的 payload type
 SWITCH_DECLARE(switch_status_t)
 switch_core_media_get_offered_pt(switch_core_session_t* session,
                                  const switch_codec_implementation_t* mimp, switch_payload_t* pt) {
@@ -3540,7 +3551,7 @@ switch_core_media_get_offered_pt(switch_core_session_t* session,
 
 // #define get_int_value(_var, _set) { const char *__v =
 // switch_channel_get_variable(session->channel, _var); if (__v) { _set = atol(__v);} }
-//?
+//? 解析编解码器设置字符串（如 @"bitrate=30000,packetization=20"）
 static void switch_core_session_parse_codec_settings(switch_core_session_t* session,
                                                      switch_media_type_t type) {
     switch_media_handle_t* smh;
@@ -3587,7 +3598,7 @@ static void switch_core_session_parse_codec_settings(switch_core_session_t* sess
     }
 }
 
-//?
+//? 根据协商结果设置视频编解码器（H264/VP8/VP9等），打开编解码器实例
 SWITCH_DECLARE(switch_status_t)
 switch_core_media_set_video_codec(switch_core_session_t* session, int force) {
     switch_status_t status = SWITCH_STATUS_SUCCESS;
@@ -3701,7 +3712,7 @@ end:
     return status;
 }
 
-//?
+//? 根据协商结果设置音频编解码器（PCMA/PCMU/Opus等），处理 ptime、采样率、通道数匹配
 SWITCH_DECLARE(switch_status_t)
 switch_core_media_set_codec(switch_core_session_t* session, int force, uint32_t codec_flags) {
     switch_status_t status = SWITCH_STATUS_SUCCESS;
@@ -3989,7 +4000,7 @@ switch_core_media_add_ice_acl(switch_core_session_t* session, switch_media_type_
     return SWITCH_STATUS_FALSE;
 }
 
-//?
+//? 检查视频编解码器列表，确保格式正确
 SWITCH_DECLARE(void)
 switch_core_media_check_video_codecs(switch_core_session_t* session) {
     switch_media_handle_t* smh;
@@ -12313,7 +12324,7 @@ static switch_bool_t stream_rejected(switch_media_handle_t* smh, sdp_media_e st)
     return SWITCH_FALSE;
 }
 
-//?
+//? 在 SDP 中设置 image/udptl 媒体行（用于 T.38 协商）
 SWITCH_DECLARE(void)
 switch_core_media_set_udptl_image_sdp(switch_core_session_t* session,
                                       switch_t38_options_t* t38_options, int insist) {
@@ -12814,7 +12825,7 @@ end:
     switch_core_media_set_local_sdp(session, new_sdp, SWITCH_FALSE);
 }
 
-//?
+//? 启动 UDPTL 传输（创建 RTP session 并配置为 UDPTL 模式）
 SWITCH_DECLARE(void)
 switch_core_media_start_udptl(switch_core_session_t* session, switch_t38_options_t* t38_options) {
     switch_media_handle_t* smh;
@@ -13870,7 +13881,7 @@ switch_core_media_get_stats(switch_core_session_t* session, switch_media_type_t 
     return NULL;
 }
 
-//?
+//? 检查是否处于 UDPTL 模式
 SWITCH_DECLARE(switch_bool_t)
 switch_core_media_check_udptl_mode(switch_core_session_t* session, switch_media_type_t type) {
     switch_media_handle_t* smh;

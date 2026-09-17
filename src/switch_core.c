@@ -1909,7 +1909,7 @@ switch_core_init(switch_core_flag_t flags, switch_bool_t console, const char** e
 #endif
 
     if (!runtime.cpu_count) runtime.cpu_count = 1;
-
+    // sqlite3 初始化
     if (sqlite3_initialize() != SQLITE_OK) {
         *err = "FATAL ERROR! Could not initialize SQLite\n";
         return SWITCH_STATUS_MEMERR;
@@ -1926,7 +1926,7 @@ switch_core_init(switch_core_flag_t flags, switch_bool_t console, const char** e
         return SWITCH_STATUS_MEMERR;
     }
     switch_assert(runtime.memory_pool != NULL);
-
+    // 运行时的目录解析
     switch_dir_make_recursive(SWITCH_GLOBAL_dirs.base_dir, SWITCH_DEFAULT_DIR_PERMS,
                               runtime.memory_pool);
     switch_dir_make_recursive(SWITCH_GLOBAL_dirs.mod_dir, SWITCH_DEFAULT_DIR_PERMS,

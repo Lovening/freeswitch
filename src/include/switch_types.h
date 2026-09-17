@@ -276,8 +276,8 @@ typedef struct {
 } switch_uint31_t;
 
 typedef enum {
-  SWITCH_PVT_PRIMARY = 0,
-  SWITCH_PVT_SECONDARY
+  SWITCH_PVT_PRIMARY = 0, //主私有数据 — 端点模块的核心 tech_pvt。如 mod_sofia 的 sofia_pvt_t
+  SWITCH_PVT_SECONDARY //次私有数据 — 附加模块的私有状态。如 mod_verto 的 verto_pvt_t
 } switch_pvt_class_t;
 
 /*!
@@ -2857,11 +2857,11 @@ typedef struct payload_map_s {
 } payload_map_t;
 
 typedef enum {
-  SWITCH_MEDIA_FLOW_SENDRECV = 0,
-  SWITCH_MEDIA_FLOW_SENDONLY,
-  SWITCH_MEDIA_FLOW_RECVONLY,
-  SWITCH_MEDIA_FLOW_INACTIVE,
-  SWITCH_MEDIA_FLOW_DISABLED
+  SWITCH_MEDIA_FLOW_SENDRECV = 0, // 接收和发送媒体流
+  SWITCH_MEDIA_FLOW_SENDONLY, // 仅发送媒体流
+  SWITCH_MEDIA_FLOW_RECVONLY, // 仅接收媒体流
+  SWITCH_MEDIA_FLOW_INACTIVE, // 不接收也不发送媒体流
+  SWITCH_MEDIA_FLOW_DISABLED // 媒体流被禁用
 } switch_media_flow_t;
 
 typedef enum {
