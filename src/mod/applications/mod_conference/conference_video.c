@@ -3271,10 +3271,15 @@ conference_video_muxing_thread_run(switch_thread_t* thread, void* obj) {
     int files_playing = 0;
     int last_personal = conference_utils_test_flag(conference, CFLAG_PERSONAL_CANVAS) ? 1 : 0;
     int last_video_count = 0;
+    int avatar_count = 0, last_avatar_count = 0;
     int watchers = 0, last_watchers = 0;
 
     canvas->video_timer_reset = 1;
     canvas->video_layout_group = conference->video_layout_group;
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
+        "[CANVAS_INIT] canvas=%d video_layout_group=%s\n",
+        canvas->canvas_id,
+        canvas->video_layout_group ? canvas->video_layout_group : "NULL");
 
     packet = switch_core_alloc(conference->pool, SWITCH_RTP_MAX_BUF_LEN);
 
@@ -3312,6 +3317,7 @@ conference_video_muxing_thread_run(switch_thread_t* thread, void* obj) {
         }
 
         video_count = 0;
+        avatar_count = 0;
 
         switch_mutex_lock(conference->file_mutex);
         if (conference->async_fnode &&
@@ -3373,13 +3379,25 @@ conference_video_muxing_thread_run(switch_thread_t* thread, void* obj) {
                 imember->video_media_flow != SWITCH_MEDIA_FLOW_INACTIVE) {
                 video_count++;
             }
+
+            /* count avatar-only members (e.g. audio columns) that also occupy canvas slots */
+            if (imember->channel && switch_channel_ready(imember->channel) &&
+                !conference_utils_member_test_flag(imember, MFLAG_SECOND_SCREEN) && !hold &&
+                conference_utils_member_test_flag(imember, MFLAG_RUNNING) &&
+                imember->canvas_id == canvas->canvas_id &&
+                imember->avatar_png_img &&
+                !switch_channel_test_flag(imember->channel, CF_VIDEO_READY)) {
+                avatar_count++;
+            }
         }
 
-        if (video_count != canvas->video_count || video_count != last_video_count) {
+        if (video_count != canvas->video_count || video_count != last_video_count ||
+            avatar_count != last_avatar_count) {
             count_changed = 1;
         }
 
         canvas->video_count = last_video_count = video_count;
+        last_avatar_count = avatar_count;
         switch_mutex_unlock(conference->member_mutex);
 
         if (canvas->playing_video_file) {
@@ -3434,17 +3452,37 @@ conference_video_muxing_thread_run(switch_thread_t* thread, void* obj) {
         if (count_changed && !personal) {
             layout_group_t* lg = NULL;
             video_layout_t* vlayout = NULL;
+            /* 若线程启动时存在竞态导致 layout_group 为 NULL，从 conference 补救 */
+            if (!canvas->video_layout_group && conference->video_layout_group) {
+                canvas->video_layout_group = conference->video_layout_group;
+            }
 
             if (canvas->video_layout_group &&
                 (lg = switch_core_hash_find(conference->layout_group_hash,
                                             canvas->video_layout_group))) {
+                int layout_count = canvas->video_count + avatar_count - file_count;
                 if ((vlayout = conference_video_find_best_layout(
-                         conference, lg, canvas->video_count - file_count, file_count)) &&
+                         conference, lg, layout_count, file_count)) &&
                     vlayout != canvas->vlayout) {
                     switch_mutex_lock(conference->member_mutex);
                     canvas->new_vlayout = vlayout;
                     switch_mutex_unlock(conference->member_mutex);
                 }
+
+                /* 调试日志：显示布局切换决策 */
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
+                    "[LAYOUT_DEBUG] canvas=%d video_count=%d avatar_count=%d file_count=%d layout_group=%s "
+                    "cur_vlayout=%s best_vlayout=%s new_vlayout_set=%s\n",
+                    canvas->canvas_id, canvas->video_count, avatar_count, file_count,
+                    canvas->video_layout_group,
+                    canvas->vlayout ? canvas->vlayout->name : "NULL",
+                    vlayout ? vlayout->name : "NULL",
+                    (vlayout && vlayout != canvas->vlayout) ? "YES" : "NO");
+            } else {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
+                    "[LAYOUT_DEBUG] canvas=%d video_count=%d layout_group=%s (group NOT FOUND)\n",
+                    canvas->canvas_id, canvas->video_count,
+                    canvas->video_layout_group ? canvas->video_layout_group : "NULL");
             }
         }
 
@@ -3777,6 +3815,17 @@ conference_video_muxing_thread_run(switch_thread_t* thread, void* obj) {
                     if (img && img != imember->avatar_png_img) {
                         switch_img_free(&img);
                     }
+
+#ifdef HAVE_LIBAVFILTER
+                    /* 视频静音状态下，当麦克风状态变化时重置 mute_patched 以触发重新渲染，更新麦克风图标 */
+                    if (layer->filter_enabled) {
+                        switch_bool_t can_speak_now = conference_utils_member_test_flag(imember, MFLAG_CAN_SPEAK) ? SWITCH_TRUE : SWITCH_FALSE;
+                        if (layer->filter_last_can_speak != can_speak_now) {
+                            switch_img_free(&layer->mute_img);  /* 清除旧 mute_img 避免 banner 文字叠加 */
+                            layer->mute_patched = 0;
+                        }
+                    }
+#endif
 
                     if (!layer->mute_patched) {
                         if (!imember->video_mute_img) {

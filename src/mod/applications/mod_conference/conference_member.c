@@ -1030,6 +1030,13 @@ switch_status_t conference_member_add(conference_obj_t* conference, conference_m
                 SWITCH_STATUS_SUCCESS) {
             conference_member_add_event_data(member, event);
             switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Action", "add-member");
+            {
+                char *event_str = NULL;
+                switch_event_serialize(event, &event_str, SWITCH_FALSE);
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO,
+                                  "Firing add-member event:\n%s\n", switch_str_nil(event_str));
+                switch_safe_free(event_str);
+            }
             switch_event_fire(&event);
         }
 

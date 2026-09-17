@@ -416,8 +416,8 @@
 
   <!-- Video Settings -->
   <!-- Setting the max bandwdith -->
-  <X-PRE-PROCESS cmd="set" data="rtp_video_max_bandwidth_in=3mb"/>
-  <X-PRE-PROCESS cmd="set" data="rtp_video_max_bandwidth_out=3mb"/>
+  <X-PRE-PROCESS cmd="set" data="rtp_video_max_bandwidth_in=10mb"/>
+  <X-PRE-PROCESS cmd="set" data="rtp_video_max_bandwidth_out=10mb"/>
 
   <!-- WebRTC Video -->
   <!-- Suppress CNG for WebRTC Audio -->
