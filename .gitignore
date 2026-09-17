@@ -289,3 +289,8 @@ src/mod/endpoints/mod_sofia/test/sipp-based-tests
 
 # Network capture files
 *.pcap
+
+# AI assistant tooling (local only, not for version control)
+.codex
+.understand-anything/
+.github/copilot-instructions.md
