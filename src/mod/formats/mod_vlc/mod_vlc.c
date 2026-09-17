@@ -193,31 +193,87 @@ void log_cb(void *data, int level, const libvlc_log_t *ctx, const char *fmt, va_
 }
 
 
+// yuv:422 to yuv:420
+// void yuyv_to_i420(uint8_t *pixels, void *out_buffer, int src_width, int src_height)
+// {
+// 	uint8_t *Y, *U, *V;
+// 	int h, w;
 
-void yuyv_to_i420(uint8_t *pixels, void *out_buffer, int src_width, int src_height)
-{
-	uint8_t *Y, *U, *V;
-	int h, w;
+// 	Y = out_buffer;
+// 	U = Y + src_width * src_height;
+// 	V = U + (src_width * src_height>>2);
 
-	Y = out_buffer;
-	U = Y + src_width * src_height;
-	V = U + (src_width * src_height>>2);
+// 	for (h=0; h<src_height; ++h) {
+// 		for (w=0; w<src_width; ++w) {
+// 			Y[w] = pixels[2 * w];
+// 			if (w % 2 == 0 && h % 2 == 0) {
+// 				U[w / 2] = pixels[2*w + 1];
+// 				V[w / 2] = pixels[2*w + 3];
+// 			}
+// 		}
+// 		pixels = pixels + src_width * 2;
+// 		Y = Y + src_width;
+// 		if ( h % 2 == 0) {
+// 			U = U + (src_width >> 1);
+// 			V = V + (src_width >> 1);
+// 		}
+// 	}
+// }
 
-	for (h=0; h<src_height; ++h) {
-		for (w=0; w<src_width; ++w) {
-			Y[w] = pixels[2 * w];
-			if (w % 2 == 0 && h % 2 == 0) {
-				U[w / 2] = pixels[2*w + 1];
-				V[w / 2] = pixels[2*w + 3];
-			}
-		}
-		pixels = pixels + src_width * 2;
-		Y = Y + src_width;
-		if ( h % 2 == 0) {
-			U = U + (src_width >> 1);
-			V = V + (src_width >> 1);
-		}
-	}
+// 优化版本：消除内层循环的 % 判断，提高流水线效率
+void yuyv_to_i420(const uint8_t *pixels, uint8_t *out_buffer, 
+                            int src_width, int src_height) {
+    int half_width, half_height;
+    int h, w;
+    uint8_t *Y, *U, *V;
+    const uint8_t *src_row;
+
+    if (!pixels || !out_buffer || src_width <= 0 || src_height <= 0) return;
+
+    // 确保宽高是偶数，否则需要特殊处理边缘（工业界一般直接对齐）
+    half_width = src_width >> 1;
+    half_height = src_height >> 1;
+
+    Y = out_buffer;
+    U = Y + src_width * src_height;
+    V = U + half_width * half_height;
+
+    src_row = pixels;
+
+    // 核心优化思想：每次循环处理 2 行 2 列数据 (即一个 2x2 的 Y 块)
+    for (h = 0; h < half_height; ++h) {
+        const uint8_t *src_row_next = src_row + (src_width * 2);
+        
+        uint8_t *Y_row1 = Y;
+        uint8_t *Y_row2 = Y + src_width;
+        
+        for (w = 0; w < half_width; ++w) {
+            int src_idx = w * 4; // YUYV 中，每 4 个字节为一个宏块 [Y0, U, Y1, V]
+
+            // 1. 提取 4 个 Y 分量
+            Y_row1[0] = src_row[src_idx];     // Y (偶数行, 偶数列)
+            Y_row1[1] = src_row[src_idx + 2]; // Y (偶数行, 奇数列)
+            Y_row2[0] = src_row_next[src_idx];     // Y (奇数行, 偶数列)
+            Y_row2[1] = src_row_next[src_idx + 2]; // Y (奇数行, 奇数列)
+
+            // 2. 提取 1 个 U 和 1 个 V 分量 (只从第一行取)
+            U[w] = src_row[src_idx + 1];
+            V[w] = src_row[src_idx + 3];
+
+            // 指针往后挪 2 个像素位置
+            Y_row1 += 2;
+            Y_row2 += 2;
+        }
+
+        // Y 指针跳跃两行
+        Y += (src_width * 2);
+        // U, V 指针跳跃一行
+        U += half_width;
+        V += half_width;
+
+        // 源指针跳跃两行
+        src_row += (src_width * 4); 
+    }
 }
 
 static void vlc_mediaplayer_error_callback(const libvlc_event_t * event, void * data)
@@ -1824,7 +1880,8 @@ SWITCH_STANDARD_APP(capture_video_function)
 
 	context = switch_core_session_alloc(session, sizeof(vlc_video_context_t));
 	switch_assert(context);
-	memset(context, 0, sizeof(vlc_file_context_t));
+	// memset(context, 0, sizeof(vlc_file_context_t));
+	memset(context, 0, sizeof(vlc_video_context_t));
 
 	if ((tmp = switch_channel_get_variable(channel, "vlc_capture_offset"))) {
 		int x = atoi(tmp);
@@ -2149,7 +2206,7 @@ static switch_status_t setup_tech_pvt(switch_core_session_t *osession, switch_co
 	switch_core_session_set_private(session, tech_pvt);
 
 	context = switch_core_session_alloc(session, sizeof(vlc_video_context_t));
-	memset(context, 0, sizeof(vlc_file_context_t));
+	memset(context, 0, sizeof(vlc_video_context_t));
 	tech_pvt->context = context;
 	context->vlc_handle = libvlc_new(sizeof(vlc_args)/sizeof(char *), vlc_args);
 	libvlc_log_set(context->vlc_handle, log_cb, NULL);
@@ -2199,6 +2256,11 @@ static switch_status_t setup_tech_pvt(switch_core_session_t *osession, switch_co
 	} else if (! strncmp(path, "rtsp", 4)){
 		// context->m = libvlc_media_new_path(context->vlc_handle, path);
 		context->m = libvlc_media_new_location(context->vlc_handle, path);
+		if (context->m) {
+    		libvlc_media_add_option(context->m, ":rtsp-tcp");
+    		libvlc_media_add_option(context->m, ":network-caching=1000");
+    		libvlc_media_add_option(context->m, ":live-caching=1000");
+		}
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "VLC Path is rtsp %s\n", path);
 	} else if (! strncmp(path, "/", 1)){
 		context->m = libvlc_media_new_path(context->vlc_handle, path);
@@ -2427,6 +2489,8 @@ static switch_call_cause_t vlc_outgoing_channel(switch_core_session_t *session, 
 	switch_channel_set_state(channel, CS_INIT);
 
 	switch_channel_mark_answered(channel);
+	/* VLC 不走 SDP 协商，需手动标记视频就绪，否则会议混流循环会跳过该成员 */
+	// switch_channel_set_flag(channel, CF_VIDEO_READY);
 
 	// start play
 	if (-1 == libvlc_media_player_play(tech_pvt->context->mp)) {
