@@ -1,5 +1,5 @@
 {
-    "cmake.sourceDirectory": "/home/zj/workSpace/freeswitch/src/freeswitch/mod_janus",
+    "cmake.sourceDirectory": "/home/zj/workSpace/freeswitch/mod_janus",
     "files.associations": {
         "*.jcfg": "jsonc",
         "*.md": "markdown",
