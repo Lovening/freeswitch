@@ -151,45 +151,45 @@ typedef enum {
 } switch_originator_type_t;
 
 struct switch_channel {
-	char *name;
-	switch_call_direction_t direction;
-	switch_call_direction_t logical_direction;
-	switch_queue_t *dtmf_queue;
-	switch_queue_t *dtmf_log_queue;
-	switch_mutex_t*dtmf_mutex;
-	switch_mutex_t *flag_mutex;
-	switch_mutex_t *state_mutex;
-	switch_mutex_t *thread_mutex;
-	switch_mutex_t *profile_mutex;
-	switch_core_session_t *session;
-	switch_channel_state_t state;
-	switch_channel_state_t running_state;
-	switch_channel_callstate_t callstate;
-	uint32_t flags[CF_FLAG_MAX];
-	uint32_t caps[CC_FLAG_MAX];
-	uint8_t state_flags[CF_FLAG_MAX];
-	uint32_t private_flags;
-	switch_caller_profile_t *caller_profile;
-	const switch_state_handler_table_t *state_handlers[SWITCH_MAX_STATE_HANDLERS];
-	int state_handler_index;
-	switch_event_t *variables;
-	switch_event_t *scope_variables;
-	switch_hash_t *private_hash;
-	switch_hash_t *app_flag_hash;
-	switch_call_cause_t hangup_cause;
-	int vi;
-	int event_count;
-	int profile_index;
-	opaque_channel_flag_t opaque_flags;
-	switch_originator_type_t last_profile_type;
-	switch_caller_extension_t *queued_extension;
-	switch_event_t *app_list;
-	switch_event_t *api_list;
-	switch_event_t *var_list;
-	switch_hold_record_t *hold_record;
-	switch_device_node_t *device_node;
-	char *device_id;
-	switch_event_t *log_tags;
+	char *name; /* 通道名称 (如 "sofia/internal/1000@domain.com") */
+	switch_call_direction_t direction; /* 呼叫方向: 呼入或呼出 */
+	switch_call_direction_t logical_direction; /* 桥接呼叫的逻辑方向 */
+	switch_queue_t *dtmf_queue; /* 接收到的 DTMF 数字队列 */
+	switch_queue_t *dtmf_log_queue; /* DTMF 日志队列 */
+	switch_mutex_t*dtmf_mutex; /* DTMF 队列访问互斥锁 */
+	switch_mutex_t *flag_mutex; /* 保护通道标志的互斥锁 */
+	switch_mutex_t *state_mutex; /* 保护通道状态转换的互斥锁 */
+	switch_mutex_t *thread_mutex; /* 线程安全操作的互斥锁 */
+	switch_mutex_t *profile_mutex; /* 主叫配置文件访问互斥锁 */
+	switch_core_session_t *session; /* 指向父会话对象的指针 */
+	switch_channel_state_t state; /* 当前通道状态 (CS_NEW, CS_INIT, CS_ROUTING 等) */
+	switch_channel_state_t running_state; /* 状态机执行的运行状态 */
+	switch_channel_callstate_t callstate; /* 呼叫状态 (振铃、活动、保持等) */
+	uint32_t flags[CF_FLAG_MAX]; /* 通道标志数组 (已应答、呼出、桥接等) */
+	uint32_t caps[CC_FLAG_MAX]; /* 通道能力标志 */
+	uint8_t state_flags[CF_FLAG_MAX]; /* 特定状态标志 */
+	uint32_t private_flags; /* 私有实现标志 */
+	switch_caller_profile_t *caller_profile; /* 主叫配置文件 (主叫 ID、号码、上下文) */
+	const switch_state_handler_table_t *state_handlers[SWITCH_MAX_STATE_HANDLERS]; /* 状态处理器回调 */
+	int state_handler_index; /* 当前状态处理器索引 */
+	switch_event_t *variables; /* 通道变量 (键值对) */
+	switch_event_t *scope_variables; /* 拨号计划执行的作用域变量 */
+	switch_hash_t *private_hash; /* 私有数据哈希表 */
+	switch_hash_t *app_flag_hash; /* 应用程序特定标志 */
+	switch_call_cause_t hangup_cause; /* 呼叫挂断原因 */
+	int vi; /* 变量迭代器索引 */
+	int event_count; /* 已处理的事件数量 */
+	int profile_index; /* 主叫配置文件索引 */
+	opaque_channel_flag_t opaque_flags; /* 模块使用的不透明标志 */
+	switch_originator_type_t last_profile_type; /* 最后一个发起者的类型 */
+	switch_caller_extension_t *queued_extension; /* 排队的拨号计划扩展 */
+	switch_event_t *app_list; /* 已执行的应用程序列表 */
+	switch_event_t *api_list; /* 已执行的 API 命令列表 */
+	switch_event_t *var_list; /* 用于迭代的变量列表 */
+	switch_hold_record_t *hold_record; /* 保持/取消保持事件记录 */
+	switch_device_node_t *device_node; /* 多设备场景的设备节点 */
+	char *device_id; /* 设备标识符字符串 */
+	switch_event_t *log_tags; /* 该通道的自定义日志标签 */
 };
 
 static void process_device_hup(switch_channel_t *channel);
@@ -2267,7 +2267,7 @@ SWITCH_DECLARE(int) switch_channel_check_signal(switch_channel_t *channel, switc
 	switch_ivr_parse_signal_data(channel->session, SWITCH_FALSE, in_thread_only);
 	return 0;
 }
-
+// Returns 1 if ready, 0 if not ready
 SWITCH_DECLARE(int) switch_channel_test_ready(switch_channel_t *channel, switch_bool_t check_ready, switch_bool_t check_media)
 {
 	int ret = 0;
@@ -2290,7 +2290,7 @@ SWITCH_DECLARE(int) switch_channel_test_ready(switch_channel_t *channel, switch_
 		return ret;
 
 	ret = 0;
-
+	
 	if (!channel->hangup_cause && channel->state > CS_ROUTING && channel->state < CS_HANGUP && channel->state != CS_RESET &&
 		!switch_channel_test_flag(channel, CF_TRANSFER) && !switch_channel_test_flag(channel, CF_NOT_READY) &&
 		!switch_channel_state_change_pending(channel)) {
@@ -2654,7 +2654,7 @@ SWITCH_DECLARE(void) switch_channel_state_thread_unlock(switch_channel_t *channe
 {
 	switch_mutex_unlock(channel->thread_mutex);
 }
-
+// 设置事件的基本数据
 SWITCH_DECLARE(void) switch_channel_event_set_basic_data(switch_channel_t *channel, switch_event_t *event)
 {
 	switch_caller_profile_t *caller_profile, *originator_caller_profile = NULL, *originatee_caller_profile = NULL;

@@ -90,7 +90,7 @@ struct switch_state_handler_table {
 	int flags;
 	void *padding[10];
 };
-
+// 结构体 switch_stream_handle 的作用是提供一个通用的“流式输出/输入”抽象，供各模块/API/控制台把结果写入到同一套接口里，统一地累积为内存缓冲或直接写出。
 struct switch_stream_handle {
 	switch_stream_handle_read_function_t read_function;
 	switch_stream_handle_write_function_t write_function;
@@ -376,7 +376,7 @@ struct switch_file_handle {
 	uint32_t cur_samplerate;
 	char *stream_name;
 	char *modname;
-	switch_mm_t mm;
+	switch_mm_t mm; // 媒体信息
 	switch_mutex_t *flag_mutex;
 	/*! total video duration, or total page in pdf*/
 	int64_t duration;
@@ -719,47 +719,48 @@ struct switch_codec {
 	switch_frame_t *cur_frame;
 };
 
+// 结构体是 FreeSWITCH 中编解码器实现的完整描述符，定义了一个编解码器的所有技术参数和操作函数。
 /*! \brief A table of settings and callbacks that define a paticular implementation of a codec */
 struct switch_codec_implementation {
-	/*! enumeration defining the type of the codec */
+	/*! enumeration defining the type of the codec 类型（音频/视频） */
 	switch_codec_type_t codec_type;
-	/*! the IANA code number */
+	/*! the IANA code number  IANA 负载类型编号（如 PCMU=0, PCMA=8）*/
 	switch_payload_t ianacode;
-	/*! the IANA code name */
+	/*! the IANA code name  IANA 标准名称（如 "OPUS", "G722"）*/
 	char *iananame;
 	/*! default fmtp to send (can be overridden by the init function) */
 	char *fmtp;
-	/*! samples transferred per second */
+	/*! samples transferred per second 采样率（如 8000/48000） */
 	uint32_t samples_per_second;
-	/*! actual samples transferred per second for those who are not moron g722 RFC writers */
+	/*! actual samples transferred per second for those who are not moron g722 RFC writers 实际采样率（G.722 特殊处理）*/
 	uint32_t actual_samples_per_second;
-	/*! bits transferred per second */
+	/*! bits transferred per second  比特率（如 64000）*/
 	int bits_per_second;
-	/*! number of microseconds of media in one packet (ptime * 1000) */
+	/*! number of microseconds of media in one packet (ptime * 1000) 每包时长（ptime * 1000） */
 	int microseconds_per_packet;
-	/*! number of samples in one packet */
+	/*! number of samples in one packet  每包采样数 */
 	uint32_t samples_per_packet;
-	/*! number of bytes one packet will decompress to */
+	/*! number of bytes one packet will decompress to  解码后字节数*/
 	uint32_t decoded_bytes_per_packet;
-	/*! number of encoded bytes in the RTP payload */
+	/*! number of encoded bytes in the RTP payload  RTP 负载字节数*/
 	uint32_t encoded_bytes_per_packet;
 	/*! number of channels represented */
 	uint8_t number_of_channels;
-	/*! number of codec frames packetized into one packet */
+	/*! number of codec frames packetized into one packet 每包帧数 */
 	int codec_frames_per_packet;
-	/*! function to initialize a codec handle using this implementation */
+	/*! function to initialize a codec handle using this implementation 初始化编解码器状态 */
 	switch_core_codec_init_func_t init;
-	/*! function to encode raw data into encoded data */
+	/*! function to encode raw data into encoded data 音频编码 */
 	switch_core_codec_encode_func_t encode;
-	/*! function to decode encoded data into raw data */
+	/*! function to decode encoded data into raw data  音频解码*/
 	switch_core_codec_decode_func_t decode;
-	/*! function to encode video raw data into encoded data */
+	/*! function to encode video raw data into encoded data 视频编码 */
 	switch_core_codec_video_encode_func_t encode_video;
-	/*! function to decode video encoded data into raw data */
+	/*! function to decode video encoded data into raw data 视频解码 */
 	switch_core_codec_video_decode_func_t decode_video;
-	/*! function to send control messages to the codec */
+	/*! function to send control messages to the codec 动态参数控制 */
 	switch_core_codec_control_func_t codec_control;
-	/*! deinitalize a codec handle using this implementation */
+	/*! deinitalize a codec handle using this implementation 清理资源 */
 	switch_core_codec_destroy_func_t destroy;
 	uint32_t codec_id;
 	uint32_t impl_id;

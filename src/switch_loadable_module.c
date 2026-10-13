@@ -1842,6 +1842,7 @@ SWITCH_DECLARE(switch_status_t) switch_loadable_module_load_module(const char *d
 	return switch_loadable_module_load_module_ex(dir, fname, runtime, SWITCH_FALSE, err, SWITCH_LOADABLE_MODULE_TYPE_COMMON, NULL);
 }
 
+//switch_loadable_module_load_module_ex 函数尝试从指定目录和文件名加载可加载模块，处理平台特定的扩展名、重复模块检查和初始化例程。该函数返回成功或失败的状态以及错误信息（如适用），并支持模块的运行时执行和事件哈希处理。
 static switch_status_t switch_loadable_module_load_module_ex(const char *dir, const char *fname, switch_bool_t runtime, switch_bool_t global, const char **err, switch_loadable_module_type_t type, switch_hash_t *event_hash)
 {
 	switch_size_t len = 0;
@@ -2282,7 +2283,7 @@ SWITCH_DECLARE(switch_status_t) switch_loadable_module_init(switch_bool_t autolo
 	switch_core_hash_init(&loadable_modules.secondary_recover_hash);
 	switch_mutex_init(&loadable_modules.mutex, SWITCH_MUTEX_NESTED, loadable_modules.pool);
 	switch_thread_rwlock_create(&loadable_modules.chat_rwlock, loadable_modules.pool);
-
+	
 	/*
 	   Build the optional interface allowlist from switch.conf.xml. When at least one <allow>
 	   entry is present, ONLY the permitted modules (e.g. "mod_commands") or specific interfaces
@@ -3126,7 +3127,7 @@ SWITCH_DECLARE(switch_status_t) switch_api_execute(const char *cmd, const char *
 	switch_assert(stream != NULL);
 	switch_assert(stream->data != NULL);
 	switch_assert(stream->write_function != NULL);
-
+	// 字符串不相同
 	if (strcasecmp(cmd, "console_complete")) {
 		cmd_used = switch_strip_whitespace(cmd);
 		arg_used = switch_strip_whitespace(arg);
@@ -3149,7 +3150,7 @@ SWITCH_DECLARE(switch_status_t) switch_api_execute(const char *cmd, const char *
 		}
 	}
 
-
+	// 调用 interface 执行命令,根据cmd_used 获取对应的接口，比如cmd_used="conference" 就会获取到 conf 接口
 	if (cmd_used && (api = switch_loadable_module_get_api_interface(cmd_used)) != 0) {
 		if ((status = api->function(arg_used, session, stream)) != SWITCH_STATUS_SUCCESS) {
 			stream->write_function(stream, "COMMAND RETURNED ERROR!\n");

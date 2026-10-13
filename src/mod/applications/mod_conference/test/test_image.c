@@ -33,6 +33,10 @@
 #include <stdlib.h>
 
 #include <test/switch_test.h>
+extern int conference_video_label_top_for_size(int width, int height);
+extern int conference_video_label_icon_top_for_size(int width, int height);
+extern int conference_video_label_text_width_for_size(const char *text, int width, int height);
+extern const char *conference_video_mic_icon_pixel_format(void);
 
 FST_CORE_BEGIN("./conf")
 {
@@ -103,6 +107,7 @@ FST_CORE_BEGIN("./conf")
 			switch_img_txt_handle_t *txthandle = NULL;
 			const char *txt = "FEESWITCH ROCKS";
 			const char *alttxt = "freeswitch";
+			const char *utf8_four_chars = "\xE4\xB8\xBB\xE7\xAE\xA1\xE9\xA2\x86\xE5\xAF\xBC";
 
 			sprintf(path, "%s%s%s", SWITCH_GLOBAL_dirs.conf_dir, SWITCH_PATH_SEPARATOR, "../images/signalwire-scaled-ARGB-8.png");
 			img = switch_img_read_png(path, SWITCH_IMG_FMT_ARGB);
@@ -113,6 +118,18 @@ FST_CORE_BEGIN("./conf")
 			switch_img_txt_handle_render(txthandle, img, 60, 15, alttxt, NULL, altfg, "#000000", font_size, 0);
 			sprintf(path, "%s%s%s", SWITCH_GLOBAL_dirs.conf_dir, SWITCH_PATH_SEPARATOR, "../images/signalwire-scaled-ARGB-8-txt.png");
 			switch_img_write_png(img, path);
+
+			fst_check(conference_video_label_top_for_size(320, 180) == 151);
+			fst_check(conference_video_label_icon_top_for_size(320, 180) == 157);
+			fst_check(conference_video_label_top_for_size(160, 90) == 73);
+			fst_check(conference_video_label_icon_top_for_size(160, 90) == 76);
+			fst_check(conference_video_label_top_for_size(640, 360) == 331);
+			fst_check(conference_video_label_icon_top_for_size(640, 360) == 337);
+			fst_check(conference_video_label_text_width_for_size("6019", 320, 180) ==
+				conference_video_label_text_width_for_size("ABCD", 320, 180));
+			fst_check(conference_video_label_text_width_for_size("ABCD", 320, 180) ==
+				conference_video_label_text_width_for_size(utf8_four_chars, 320, 180));
+			fst_check_string_equals(conference_video_mic_icon_pixel_format(), "rgba");
 
 			switch_img_free(&img);
 			switch_img_txt_handle_destroy(&txthandle);

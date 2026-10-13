@@ -77,7 +77,7 @@ SWITCH_DECLARE(switch_status_t) switch_core_perform_file_open(const char *file, 
 	int to = 0;
 	int force_channels = 0;
 	uint32_t core_channel_limit;
-
+	
 	if (switch_test_flag(fh, SWITCH_FILE_OPEN)) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Handle already open\n");
 		return SWITCH_STATUS_FALSE;

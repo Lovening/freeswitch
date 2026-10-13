@@ -34,7 +34,7 @@
 
 #include "switch.h"
 #include "private/switch_core_pvt.h"
-
+// 媒体 Bug 销毁函数
 static void switch_core_media_bug_destroy(switch_media_bug_t **bug)
 {
 	switch_event_t *event = NULL;
@@ -89,11 +89,13 @@ static void switch_core_media_bug_destroy(switch_media_bug_t **bug)
 	}
 }
 
+// 媒体 Bug 暂停函数
 SWITCH_DECLARE(void) switch_core_media_bug_pause(switch_core_session_t *session)
 {
 	switch_channel_set_flag(session->channel, CF_PAUSE_BUGS);
 }
 
+// 媒体 Bug 恢复函数
 SWITCH_DECLARE(void) switch_core_media_bug_resume(switch_core_session_t *session)
 {
 	switch_channel_clear_flag(session->channel, CF_PAUSE_BUGS);
@@ -805,7 +807,7 @@ SWITCH_DECLARE(switch_status_t) switch_core_media_bug_add(switch_core_session_t 
 	int tap_only = 1, punt = 0, added = 0;
 
 	const char *p;
-
+	
 	if (!zstr(function)) {
 		if ((flags & SMBF_ONE_ONLY)) {
 			switch_thread_rwlock_wrlock(session->bug_rwlock);

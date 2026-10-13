@@ -1,0 +1,24 @@
+# Repository Guidelines
+
+## 项目结构与模块组织
+核心交换机逻辑及可加载模块位于 `src/`，其中 `src/mod/<domain>/<mod_feature>` 细分为编解码、应用和接入端点。示例配置（拨号计划、事件套接字、XML 注册表）集中在 `conf/`，并通过 `modules.conf` 决定编译哪些模块。外部依赖源码固定在 `libs/`，工具脚本在 `scripts/` 与 `ci/`，容器脚手架在 `docker/`，测试及配套数据则存于 `tests/unit`。尽量把编译产物保留在 `build/` 或独立的构建目录，保持工作区整洁。
+
+## 构建、测试与开发命令
+- `./bootstrap.sh -j && ./configure [flags]`：刷新 autotools 并检测依赖；如需对齐 CI，请附加 `--enable-address-sanitizer --enable-fake-dlclose`。
+- `make -j$(nproc)`：根据 `modules.conf` 构建核心、库及全部模块；若需详细日志可设 `V=1`。
+- `make install DESTDIR=<staging>`：安装到打包用的暂存目录，避免直接覆盖系统 `/usr`。
+- `make check`：执行 `tests/unit` 汇总的单元测试。
+- `tests/unit/run-tests.sh 4 1 --dry-run`：把测试拆为 4 份并预览第 1 份；去掉 `--dry-run` 即可运行，可加 `--output-dir artifacts/` 收集日志。
+- `./ci.sh -c freeswitch -t unit-test -a build -p .`：本地复现 GitHub Actions 的 ASAN 构建流程。
+
+## 代码风格与命名规范
+`.clang-format` 采用 Linux 花括号、4 列制表符（`UseTab: Always`）、120 列行宽与右对齐指针；提交前请运行 `clang-format -i src/switch_core.c` 等命令。Shell 脚本头部标注其 `shfmt -w -s -ci -sr -kp -fn <file>` 用法（参见 `ci.sh`）。核心函数命名倾向 `switch_<verb>`，模块目录以 `mod_<feature>` 区分，配置文件保持小写加连字符（如 `autoload_configs/sofia.conf.xml`）。避免尾随空格并统一使用 `SWITCH_LOG_*` 日志宏。
+
+## 测试指南
+新增测试应放在 `tests/unit/<component>/test_<component>.c` 且暴露 `SWITCH_DECLARE_TEST_FUNC`。SIP/RTP 等确定性样例放入 `tests/unit/pcap/` 并相对引用，减小发布包体积。保证测试幂等，使 `make check` 与分片执行 `run-tests.sh` 都能稳定通过。
+
+## 提交与 PR 要求
+参考 `git log` 的惯例：`[module] 摘要`，必要时追加 Issue 或 PR 号，例如 `[mod_conference] 避免 conference->variables 竞争 (#2898)`。每个提交都应可独立编译，并随代码同步配置迁移或 SQL 变更。PR 描述需说明行为差异、列出验证命令、链接相关 Issue，如有用户可见输出变化应附截图或终端记录。
+
+## 安全与配置提示
+严禁提交密钥或生产证书；在 `conf/` 中使用占位符并记录运行时注入方式。修改需要新端口、特权或能力时，请参考 `SECURITY.md` 并在 PR 中说明，方便发行版维护者及时更新防火墙或 SELinux 策略。

@@ -2061,18 +2061,18 @@ static void wait_for_cause(switch_channel_t *channel)
 
 
 
-SWITCH_DECLARE(switch_status_t) switch_ivr_originate(switch_core_session_t *session,
-													 switch_core_session_t **bleg,
-													 switch_call_cause_t *cause,
-													 const char *bridgeto,
-													 uint32_t timelimit_sec,
-													 const switch_state_handler_table_t *table,
-													 const char *cid_name_override,
-													 const char *cid_num_override,
-													 switch_caller_profile_t *caller_profile_override,
-													 switch_event_t *ovars, switch_originate_flag_t flags,
-													 switch_call_cause_t *cancel_cause,
-													 switch_dial_handle_t *dh)
+SWITCH_DECLARE(switch_status_t) switch_ivr_originate(switch_core_session_t *session, //可选：当前会话（用于桥接
+													 switch_core_session_t **bleg, // 输出：新建的被叫会话
+													 switch_call_cause_t *cause, // 输出：失败原因
+													 const char *bridgeto, // 目标地址
+													 uint32_t timelimit_sec,// 超时时间（秒）
+													 const switch_state_handler_table_t *table, // 状态处理函数表
+													 const char *cid_name_override,  // 主叫名称覆盖
+													 const char *cid_num_override,// 主叫号码覆盖
+													 switch_caller_profile_t *caller_profile_override, // 主叫配置覆盖
+													 switch_event_t *ovars,  switch_originate_flag_t flags,  // 变量覆盖  标志位
+													 switch_call_cause_t *cancel_cause,// 取消原因
+													 switch_dial_handle_t *dh) // 拨号句柄列表
 {
 	//originate_status_t originate_status[MAX_PEERS] = { {0} };
 	switch_originate_flag_t dftflags = SOF_NONE, myflags;
@@ -2138,7 +2138,7 @@ SWITCH_DECLARE(switch_status_t) switch_ivr_originate(switch_core_session_t *sess
 	}
 
 
-	if (strstr(bridgeto, SWITCH_ENT_ORIGINATE_DELIM)) {
+	if (strstr(bridgeto, SWITCH_ENT_ORIGINATE_DELIM)) { // 如果包含 ":_:" 分隔符，这是企业发起模式
 		return switch_ivr_enterprise_originate(session, bleg, cause, bridgeto, timelimit_sec, table, cid_name_override, cid_num_override,
 											   caller_profile_override, ovars, flags, cancel_cause, NULL);
 	}
@@ -2149,7 +2149,7 @@ SWITCH_DECLARE(switch_status_t) switch_ivr_originate(switch_core_session_t *sess
 	oglobals.file = NULL;
 	oglobals.error_file = NULL;
 	switch_core_new_memory_pool(&oglobals.pool);
-
+	// 复制主叫配置
 	if (caller_profile_override) {
 		oglobals.caller_profile_override = switch_caller_profile_dup(oglobals.pool, caller_profile_override);
 	} else if (session) {
@@ -3050,7 +3050,7 @@ SWITCH_DECLARE(switch_status_t) switch_ivr_originate(switch_core_session_t *sess
 					switch_event_add_header_string(var_event, SWITCH_STACK_BOTTOM, "sip_h_X-FS-Channel-Name", new_name);
 				}
 
-
+				// Create the outgoing channel
 				reason = switch_core_session_outgoing_channel(oglobals.session, originate_var_event, chan_type,
 															  new_profile, &new_session, NULL, myflags, cancel_cause);
 				switch_event_destroy(&originate_var_event);
@@ -3155,11 +3155,11 @@ SWITCH_DECLARE(switch_status_t) switch_ivr_originate(switch_core_session_t *sess
 					if ((vvar = switch_channel_get_variable(oglobals.originate_status[i].peer_channel, "origination_channel_name"))) {
 						switch_channel_set_name(oglobals.originate_status[i].peer_channel, vvar);
 					}
-
+					// 外呼参数配置
 					if ((vvar = switch_channel_get_variable(oglobals.originate_status[i].peer_channel, "origination_callee_id_name"))) {
 						switch_channel_set_profile_var(oglobals.originate_status[i].peer_channel, "callee_id_name", vvar);
 					}
-
+					// 外呼参数配置
 					if ((vvar = switch_channel_get_variable(oglobals.originate_status[i].peer_channel, "origination_callee_id_number"))) {
 						switch_channel_set_profile_var(oglobals.originate_status[i].peer_channel, "callee_id_number", vvar);
 					}

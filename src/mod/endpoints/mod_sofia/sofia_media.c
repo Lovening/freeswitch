@@ -29,6 +29,9 @@
  * sofia_media.c -- SOFIA SIP Endpoint (sofia media code)
  *
  */
+
+
+//媒体处理
 #include "mod_sofia.h"
 
 

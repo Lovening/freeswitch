@@ -246,6 +246,46 @@ typedef struct {
 	switch_bool_t both_legs;
 } png_write_data;
 
+static void fire_screenshot_event(switch_core_session_t *session, const char *path,
+								  const char *other_path, const char *type)
+{
+	switch_event_t *event;
+	const char *event_subclass;
+
+	// 根据 type 判断事件类型
+	if (!strcmp(type, "start")) {
+		event_subclass = "mod_png::screenshot_start";
+	} else if (!strcmp(type, "end")) {
+		event_subclass = "mod_png::screenshot_end";
+	} else {
+		event_subclass = "mod_png::screenshot";
+	}
+
+	if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, event_subclass) == SWITCH_STATUS_SUCCESS) {
+		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Caller-Unique-ID", switch_core_session_get_uuid(session));
+		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "File", path);
+		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Type", type);
+		if (other_path) {
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Other-File", other_path);
+		}
+		switch_event_fire(&event);
+	}
+
+	if (!strcmp(type, "start")) {
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_INFO,
+						  "Screenshot started: %s\n", path);
+	} else if (!strcmp(type, "end")) {
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_INFO,
+						  "Screenshot ended: %s\n", path);
+	} else {
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_INFO,
+						  "Screenshot saved: %s (type=%s)\n", path, type);
+	}
+}
+
+
+
+
 static switch_bool_t write_png_bug_callback(switch_media_bug_t *bug, void *user_data, switch_abc_type_t type)
 {
 	switch_core_session_t *session = switch_core_media_bug_get_session(bug);
@@ -256,10 +296,12 @@ static switch_bool_t write_png_bug_callback(switch_media_bug_t *bug, void *user_
 	case SWITCH_ABC_TYPE_INIT:
 		{
 			switch_channel_set_flag_recursive(channel, CF_VIDEO_DECODED_READ);
+			fire_screenshot_event(session, data->path, data->other_path, "start");
 		}
 		break;
 	case SWITCH_ABC_TYPE_CLOSE:
 		{
+			fire_screenshot_event(session, data->path, data->other_path, "end");
 			switch_thread_rwlock_unlock(MODULE_INTERFACE->rwlock);
 			switch_channel_clear_flag_recursive(channel, CF_VIDEO_DECODED_READ);
 		}
@@ -272,6 +314,7 @@ static switch_bool_t write_png_bug_callback(switch_media_bug_t *bug, void *user_
 
 			if (data->both_legs == SWITCH_FALSE) {
 				switch_img_write_png(frame->img, data->path);
+				fire_screenshot_event(session, data->path, NULL, "read");
 				return SWITCH_FALSE;
 			}
 
@@ -288,6 +331,7 @@ static switch_bool_t write_png_bug_callback(switch_media_bug_t *bug, void *user_
 
 			if (data->both_legs == SWITCH_FALSE) {
 				switch_img_write_png(frame->img, data->path);
+				fire_screenshot_event(session, data->path, NULL, "write");
 				return SWITCH_FALSE;
 			}
 
@@ -304,6 +348,7 @@ static switch_bool_t write_png_bug_callback(switch_media_bug_t *bug, void *user_
 		if (data->other_path) {
 			switch_img_write_png(data->read_img, data->path);
 			switch_img_write_png(data->write_img, data->other_path);
+			fire_screenshot_event(session, data->path, data->other_path, "split");
 		} else {
 			int width, height;
 			switch_image_t *img;
@@ -318,6 +363,7 @@ static switch_bool_t write_png_bug_callback(switch_media_bug_t *bug, void *user_
 			switch_img_patch(img, data->write_img, data->read_img->d_w, (height - data->write_img->d_h) / 2);
 			switch_img_write_png(img, data->path);
 			switch_img_free(&img);
+			fire_screenshot_event(session, data->path, NULL, "concat");
 		}
 
 		switch_img_free(&data->read_img);
@@ -327,6 +373,7 @@ static switch_bool_t write_png_bug_callback(switch_media_bug_t *bug, void *user_
 
 	return SWITCH_TRUE;
 }
+
 
 SWITCH_STANDARD_API(uuid_write_png_function)
 {

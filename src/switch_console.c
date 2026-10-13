@@ -234,7 +234,7 @@ static int alias_callback(void *pArg, int argc, char **argv, char **columnNames)
 	*r = strdup(argv[0]);
 	return -1;
 }
-
+// 实现别名替换
 SWITCH_DECLARE(char *) switch_console_expand_alias(char *cmd, char *arg)
 {
 	char *errmsg = NULL;
@@ -314,7 +314,7 @@ static int switch_console_process(char *xcmd)
 	switch_status_t status;
 	FILE *handle = switch_core_get_console();
 	int r = 1;
-
+	// 初始化stream 使用宏
 	SWITCH_STANDARD_STREAM(stream);
 	switch_assert(stream.data);
 

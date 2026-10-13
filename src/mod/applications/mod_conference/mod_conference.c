@@ -1805,7 +1805,7 @@ switch_status_t conference_outcall_bg(conference_obj_t *conference,
 }
 
 
-
+//static void conference_auto_function(switch_core_session_t* session, const char* data)
 SWITCH_STANDARD_APP(conference_auto_function)
 {
 	switch_channel_t *channel = switch_core_session_get_channel(session);
@@ -1818,6 +1818,8 @@ SWITCH_STANDARD_APP(conference_auto_function)
 	} else {
 		np = switch_core_session_alloc(session, sizeof(*np));
 		switch_assert(np != NULL);
+		//[conference_auto_outcall_announce=/usr/local/freeswitch/share/freeswitch/sounds/welcome.wav,video_no_video_avatar_png=/usr/local/freeswitch/share/freeswitch/images/default-avatar.png]user/6010004@192.168.110.87
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_DEBUG, "Adding auto call to list: %s\n", data);
 
 		np->string = switch_core_session_strdup(session, data);
 		if (call_list) {
@@ -4033,6 +4035,19 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_conference_load)
 	if (switch_event_bind(modname, SWITCH_EVENT_CALL_SETUP_REQ, SWITCH_EVENT_SUBCLASS_ANY, conference_event_call_setup_handler, NULL) != SWITCH_STATUS_SUCCESS) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Couldn't subscribe to conference data query events!\n");
 	}
+
+	/* Always print this to verify code execution */
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,
+		"mod_conference: Module loading - checking FFmpeg filter support...\n");
+
+	/* Print FFmpeg filter support status */
+#ifdef HAVE_LIBAVFILTER
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,
+		"mod_conference: FFmpeg libavfilter support is ENABLED\n");
+#else
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
+		"mod_conference: FFmpeg libavfilter support is DISABLED (not compiled)\n");
+#endif
 
 	SWITCH_ADD_API(api_interface, "conference", "Conference module commands", conference_api_main, p);
 	SWITCH_ADD_APP(app_interface, mod_conference_app_name, mod_conference_app_name, NULL, conference_function, NULL, SAF_SUPPORT_TEXT_ONLY);

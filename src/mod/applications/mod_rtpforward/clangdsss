@@ -1,0 +1,35 @@
+CompileFlags:
+  Add:
+    # FreeSWITCH 核心头文件
+    - "-I/home/ning/workSpace/freeswitch/src/include"
+    # libwebsockets 头文件
+    - "-I/home/ning/workSpace/freeswitch/src/mod/applications/mod_rtpforward/libwebsockets/include"
+    - "-I/home/ning/workSpace/freeswitch/src/mod/applications/mod_rtpforward/libwebsockets/build/include"
+    # APR 库路径
+    - "-I/home/ning/workSpace/freeswitch/libs/apr/include"
+    - "-I/home/ning/workSpace/freeswitch/libs/apr-util/include"
+    # 其他依赖
+    - "-I/home/ning/workSpace/freeswitch/libs/sqlite"
+    - "-I/home/ning/workSpace/freeswitch/libs/pcre"
+    - "-I/usr/include"
+    - "-I/usr/local/include"
+    # 编译标志
+    - "-std=c99"
+    - "-D_GNU_SOURCE"
+    - "-DSWITCH_MOD_DECLARE(type)"
+    - "-Wno-unknown-pragmas"
+    - "-Wno-unused-parameter"
+  Remove:
+    - "-m*"
+    - "-f*san*"
+
+Diagnostics:
+  ClangTidy:
+    Remove:
+      - "modernize-*"
+      - "readability-*"
+  UnusedIncludes: None
+
+Index:
+  Background: Build
+  StandardLibrary: Yes

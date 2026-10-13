@@ -2331,8 +2331,47 @@ static switch_status_t av_file_open(switch_file_handle_t *handle, const char *pa
 		switch_clear_flag(handle, SWITCH_FILE_FLAG_VIDEO);
 	}
 
+	// switch_dir_make_recursive
+	/* 检测文件夹是否存在 */
+	// if (switch_file_exists(file)) {
+	// 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Output file '%s' already exists\n", file);
+	// 	switch_goto_status(SWITCH_STATUS_GENERR, end);
+	// }
+	// if (switch_dir_make_recursive(file, SWITCH_DEFAULT_DIR_PERMS, context->pool) != SWITCH_STATUS_SUCCESS) {
+	// 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Could not create directory for %s\n", file);
+	// 	switch_goto_status(SWITCH_STATUS_GENERR, end);
+	// }
+
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "file name is: %s\n", file);
 	/* open the output file, if needed */
 	if (!(fmt->flags & AVFMT_NOFILE)) {
+		// if (!switch_file_exists(file, context->pool)) {
+		// 	char *dir = switch_dirname(file, context->pool);
+		// 	if (switch_dir_make_recursive(dir, SWITCH_DEFAULT_DIR_PERMS, context->pool) != SWITCH_STATUS_SUCCESS) {
+		// 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Could not create directory for %s\n", file);
+		// 		switch_goto_status(SWITCH_STATUS_GENERR, end);
+		// 	}
+		// }
+		char *filePath;
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "file name is: %s\n", file);
+		filePath = strrchr(file, '/');
+		if (filePath) {
+        	size_t len = (size_t)(filePath - file + 1);  // 包含最后一个 '/'
+        	char dir[1024];
+        	if (len >= sizeof(dir)) len = sizeof(dir) - 1;
+        	memcpy(dir, file, len);
+        	dir[len] = '\0';
+        	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Creating directory %s\n", dir);
+			if (switch_directory_exists(dir, context->pool) != SWITCH_STATUS_SUCCESS) {
+
+				if (switch_dir_make_recursive(dir, SWITCH_DEFAULT_DIR_PERMS,
+					context->pool) != SWITCH_STATUS_SUCCESS) {
+					switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Could not create directory for %s\n", dir);
+					// switch_goto_status(SWITCH_STATUS_GENERR, end);
+				}
+			}
+		}
+
 		ret = avio_open(&context->fc->pb, file, AVIO_FLAG_WRITE);
 		if (ret < 0) {
 			char ebuf[255] = "";

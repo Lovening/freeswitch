@@ -14,7 +14,8 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is FreeSWITCH Modular Media Switching Software Library / Soft-Switch Application
+ * The Original Code is FreeSWITCH Modular Media Switching Software Library / Soft-Switch
+ * Application
  *
  * The Initial Developer of the Original Code is
  * Anthony Minessale II <anthm@freeswitch.org>
@@ -34,29 +35,26 @@
 FST_CORE_BEGIN("./conf_tts_format")
 FST_SUITE_BEGIN(test_tts_format)
 
-FST_SETUP_BEGIN()
-{
-	fst_requires_module("mod_test");
-}
+FST_SETUP_BEGIN() { fst_requires_module("mod_test"); }
 FST_SETUP_END()
 
-FST_TEARDOWN_BEGIN()
-{
-	switch_core_set_variable("mod_test_tts_must_have_channel_uuid", "false");
-}
+FST_TEARDOWN_BEGIN() { switch_core_set_variable("mod_test_tts_must_have_channel_uuid", "false"); }
 FST_TEARDOWN_END()
 
-FST_SESSION_BEGIN(tts_channel_uuid)
-{
-	char *tts_without_channel_uuid = "tts://test||This is a test";
-	char *tts_with_channel_uuid = switch_core_session_sprintf(fst_session, "{channel-uuid=%s}tts://test||This is a test", switch_core_session_get_uuid(fst_session));
-	switch_status_t status;
-	switch_core_set_variable("mod_test_tts_must_have_channel_uuid", "true");
-	status = switch_ivr_play_file(fst_session, NULL, tts_without_channel_uuid, NULL);
-	fst_xcheck(status != SWITCH_STATUS_SUCCESS, "Expect channel UUID not to be delivered to TTS module");
+FST_SESSION_BEGIN(tts_channel_uuid) {
+    char* tts_without_channel_uuid = "tts://test||This is a test";
+    char* tts_with_channel_uuid =
+        switch_core_session_sprintf(fst_session, "{channel-uuid=%s}tts://test||This is a test",
+                                    switch_core_session_get_uuid(fst_session));
+    switch_status_t status;
+    switch_core_set_variable("mod_test_tts_must_have_channel_uuid", "true");
+    status = switch_ivr_play_file(fst_session, NULL, tts_without_channel_uuid, NULL);
+    fst_xcheck(status != SWITCH_STATUS_SUCCESS,
+               "Expect channel UUID not to be delivered to TTS module");
 
-	status = switch_ivr_play_file(fst_session, NULL, tts_with_channel_uuid, NULL);
-	fst_xcheck(status == SWITCH_STATUS_SUCCESS, "Expect channel UUID to be delivered to TTS module");
+    status = switch_ivr_play_file(fst_session, NULL, tts_with_channel_uuid, NULL);
+    fst_xcheck(status == SWITCH_STATUS_SUCCESS,
+               "Expect channel UUID to be delivered to TTS module");
 }
 FST_SESSION_END()
 

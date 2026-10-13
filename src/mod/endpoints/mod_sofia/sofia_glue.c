@@ -33,6 +33,10 @@
  * sofia_glue.c -- SOFIA SIP Endpoint (code to tie sofia to freeswitch)
  *
  */
+
+
+
+// 粘合代码，连接Sofia与FreeSWITCH核心
 #include "mod_sofia.h"
 #include <switch_stun.h>
 
@@ -1026,7 +1030,7 @@ char *sofia_glue_get_non_extra_unknown_headers(sip_t const *sip)
 
 	return unknown;
 }
-
+// sip invite handling
 switch_status_t sofia_glue_do_invite(switch_core_session_t *session)
 {
 	char *alert_info = NULL;

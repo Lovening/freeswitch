@@ -781,7 +781,7 @@ SWITCH_DECLARE(const char *)CoreSession::getVariable(char *var)
 	sanity_check("");
     return switch_channel_get_variable(channel, var);
 }
-
+// 执行应用
 SWITCH_DECLARE(void) CoreSession::execute(const char *app, const char *data)
 {
 	this_check_void();
