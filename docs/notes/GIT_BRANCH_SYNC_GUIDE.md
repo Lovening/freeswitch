@@ -167,3 +167,10 @@ git push -u origin master:codex/local-integration
 ```
 
 个人远程的分支名和推送方式确认后再长期使用。推送不会替代本地提交，也不会更新官方仓库。
+
+
+git fetch upstream
+git switch master
+git merge --ff-only upstream/master
+git switch local
+git rebase master

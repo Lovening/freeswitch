@@ -564,6 +564,14 @@ libs/libvpx/Makefile: libs/libvpx/.update
 libs/libvpx/libvpx.a: libs/libvpx/Makefile libs/libvpx/.update
 	@cd libs/libvpx && $(MAKE)
 
+# libvpx is built by a custom dependency rule instead of Automake's SUBDIRS,
+# so make sure the top-level clean also removes its generated objects and deps.
+clean-local:
+	@if test -f libs/libvpx/Makefile; then \
+		echo "Cleaning libvpx build artifacts..."; \
+		$(MAKE) -C libs/libvpx clean; \
+	fi
+
 libs/apr/Makefile: libs/apr/Makefile.in libs/apr/config.status libs/apr libs/apr/.update
 	@cd libs/apr && ./config.status
 	@$(TOUCH_TARGET)
